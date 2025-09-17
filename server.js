@@ -16,69 +16,73 @@ app.use(cors());
 const SERP_API_KEY = process.env.SERP_API_KEY || "";
 
 app.get("/search/web", async (req, res) => {
-  const q = (req.query.q || "").toString().trim();
-  if (!q) return res.status(400).json({ error: "Missing q" });
-  if (!SERP_API_KEY) return res.status(500).json({ error: "SERP_API_KEY missing" });
+  // 🔎 Ricerca PER IMMAGINE via Bing Visual Search
+const BING_VS_KEY = process.env.BING_VS_KEY || "";
+const BING_VS_ENDPOINT = process.env.BING_VS_ENDPOINT || "https://api.bing.microsoft.com/v7.0/images/visualsearch";
 
+app.post("/search/image", upload.single("image"), async (req, res) => {
   try {
-    const serpUrl = "https://serpapi.com/search.json";
-    const { data } = await axios.get(serpUrl, {
-      params: {
-        engine: "google",
-        q,           // esempio: "Nike Air Max 270 usato site:ebay.it OR site:subito.it"
-        num: 20,
-        api_key: SERP_API_KEY,
-        hl: "it",
-        gl: "it"
+    if (!req.file) return res.status(400).json({ error: "Missing image file (field 'image')" });
+    if (!BING_VS_KEY) return res.status(500).json({ error: "BING_VS_KEY missing" });
+
+    // Invia la foto a Bing Visual Search
+    const form = new FormData();
+    form.append("image", req.file.buffer, { filename: req.file.originalname || "upload.jpg" });
+
+    const { data } = await axios.post(`${BING_VS_ENDPOINT}?mkt=it-IT`, form, {
+      headers: {
+        ...form.getHeaders(),
+        "Ocp-Apim-Subscription-Key": BING_VS_KEY
       },
-      timeout: 12000
+      timeout: 15000
     });
 
-    // Normalizza risultati in uno schema unico per la tua app
+    // Estrai “pagine che includono l’immagine” o simili
     const items = [];
-    const results = data.organic_results || [];
-    for (const r of results) {
+    const tags = data?.tags || [];
+    const whitelistHosts = ["ebay.it", "ebay.fr", "subito.it", "leboncoin.fr"];
+
+    const pushIfWhitelisted = (url, title) => {
       try {
-        const url = r.link || "";
         const host = new URL(url).hostname;
-
-        // Limita ai domini whitelist
-        const ok =
-          host.includes("ebay.it") || host.includes("ebay.fr") ||
-          host.includes("subito.it") || host.includes("leboncoin.fr");
-        if (!ok) continue;
-
-        const title = (r.title || "").toString();
-        const snippet = (r.snippet || "").toString();
-
-        // Estrai prezzo se presente nel testo
-        const m = snippet.match(/(\d+(?:[.,]\d{1,2})?)\s?€/) || title.match(/(\d+(?:[.,]\d{1,2})?)\s?€/);
+        const ok = whitelistHosts.some(h => host.includes(h));
+        if (!ok) return;
+        const txt = `${title || ""}`;
+        const m = txt.match(/(\d+(?:[.,]\d{1,2})?)\s?€/);
         const price = m ? parseFloat(m[1].replace(/\./g, "").replace(",", ".")) : 0;
-
+        const country = host.includes("fr") ? "FRANCIA" : "ITALIA";
         items.push({
-          source: "GoogleWeb",
-          country: host.includes("fr") ? "FRANCIA" : "ITALIA",
-          title,
-          description: snippet || null,
+          source: "ImageSearch",
+          country,
+          title: title || url,
+          description: null,
           price,
           shipping: null,
           currency: "EUR",
           url,
-          // Filtri base (lato app rifiltriamo meglio)
-          isNew: /con\s*etichetta|mai\s*usato|sigillat|comme\s*neuf|with\s*tag/i.test(`${title} ${snippet}`),
-          isAuction: /asta|ench[eè]re|auction|bid/i.test(`${title} ${snippet}`)
+          isNew: /con\s*etichetta|mai\s*usato|sigillat|comme\s*neuf/i.test(txt),
+          isAuction: /asta|ench[eè]re|auction|bid/i.test(txt)
         });
       } catch (_) {}
+    };
+
+    for (const tag of tags) {
+      for (const action of (tag.actions || [])) {
+        // Tipi comuni: PagesIncluding, VisualSearch, ProductVisualSearch, ShoppingSources
+        const val = action?.data?.value || action?.data || [];
+        if (Array.isArray(val)) {
+          for (const v of val) {
+            const url = v?.hostPageUrl || v?.webSearchUrl || v?.url;
+            const title = v?.name || v?.hostPageDisplayUrl || v?.description;
+            if (url) pushIfWhitelisted(url, title);
+          }
+        }
+      }
     }
 
-    res.json({ items });
+    return res.json({ items });
   } catch (e) {
-    console.error("SerpAPI error", e?.message);
-    res.status(500).json({ error: "SerpAPI failed" });
+    console.error("Image search error", e?.message);
+    return res.status(500).json({ error: "Image search failed" });
   }
 });
-
-// health check
-app.get("/", (req, res) => res.json({ ok: true, service: "howmanybucks-backend" }));
-
-app.listen(PORT, () => console.log(`API listening on :${PORT}`));
