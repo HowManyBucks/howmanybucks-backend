@@ -4,6 +4,7 @@ import axios from "axios";
 import multer from "multer";
 import FormData from "form-data";
 
+const SERP_API_KEY = process.env.SERP_API_KEY || "";
 const app = express();
 const PORT = process.env.PORT || 8080;
 
