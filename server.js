@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import axios from "axios";
+import multer from "multer";
+import FormData from "form-data";
+const upload = multer(); // in memoria
 
 const app = express();
 const PORT = process.env.PORT || 8080;
