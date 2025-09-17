@@ -1,95 +1,184 @@
-import express from "express";
-import cors from "cors";
-import axios from "axios";
-import multer from "multer";
-import FormData from "form-data";
+import express from 'express';
+import axios from 'axios';
 
-const SERP_API_KEY = process.env.SERP_API_KEY || "";
 const app = express();
-const PORT = process.env.PORT || 8080;
+app.use(express.json({ limit: '15mb' }));
 
-app.use(cors());
+const VISION_ENDPOINT = 'https://vision.googleapis.com/v1/images:annotate';
 
-// Upload in memoria
-const upload = multer();
+const ENV = {
+  GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY,
+  SERP_API_KEY: process.env.SERP_API_KEY,
+  PRICE_COUNTRY: process.env.PRICE_COUNTRY || 'IT',
+  PRICE_CURRENCY: process.env.PRICE_CURRENCY || 'EUR',
+  MAX_RESULTS_PER_SITE: parseInt(process.env.MAX_RESULTS_PER_SITE || '25', 10),
+};
 
-// ⚙️ Chiavi/endpoint Bing Visual Search (Azure)
-const BING_VS_KEY = process.env.BING_VS_KEY || "";
-const BING_VS_ENDPOINT =
-  process.env.BING_VS_ENDPOINT || "https://api.bing.microsoft.com/v7.0/images/visualsearch";
+// ---------------- Helpers ----------------
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// 🔁 HEALTH CHECK
-app.get("/", (req, res) => res.json({ ok: true, service: "howmanybucks-backend" }));
+function extractCandidateQuery({ labels = [], logos = [], text = '' }) {
+  const brand = logos[0]?.description || '';
+  const strongLabels = labels.filter(l => l.score >= 0.75).map(l => l.description);
+  const tokens = (text || '').replace(/\n+/g, ' ').split(/\s+/).filter(t => t.length >= 3).slice(0, 12);
 
-// 🖼️ /search/image — ricerca PER IMMAGINE (multipart form-data: field "image")
-app.post("/search/image", upload.single("image"), async (req, res) => {
+  let query = '';
+  if (brand) query = [brand, ...strongLabels.slice(0, 2)].join(' ');
+  else if (strongLabels.length) query = strongLabels.slice(0, 3).join(' ');
+  else if (tokens.length) query = tokens.slice(0, 4).join(' ');
+
+  const lower = (labels.map(l => l.description.toLowerCase()).join(' ') + ' ' + query.toLowerCase());
+  if (/(shirt|t shirt|maglietta|apparel|clothing)/i.test(lower) && !/t-?shirt|maglietta/i.test(query)) {
+    query = `${query} t-shirt`.trim();
+  }
+  return query.trim();
+}
+
+function parseMoney(s) {
+  if (!s) return null;
+  const m = s.replace(/[^\d,.\-]/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/);
+  return m ? Number(m[0]) : null;
+}
+
+function robustStats(prices) {
+  const arr = prices.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!arr.length) return { median: null, p25: null, p75: null, filtered: [] };
+
+  const q = (p) => {
+    const pos = (arr.length - 1) * p;
+    const base = Math.floor(pos), rest = pos - base;
+    return arr[base + 1] !== undefined ? arr[base] + rest * (arr[base + 1] - arr[base]) : arr[base];
+  };
+  const p25 = q(0.25), p50 = q(0.5), p75 = q(0.75), iqr = p75 - p25;
+  const lo = p25 - 1.5 * iqr, hi = p75 + 1.5 * iqr;
+  const filtered = arr.filter(v => v >= lo && v <= hi);
+  const mid = Math.floor(filtered.length / 2);
+  const median = filtered.length ? (filtered.length % 2 ? filtered[mid] : (filtered[mid - 1] + filtered[mid]) / 2) : p50;
+  return { median, p25, p75, filtered };
+}
+
+function humanRound(x) {
+  if (!Number.isFinite(x)) return null;
+  if (x < 20) return Math.round(x);
+  if (x < 100) return Math.round(x / 5) * 5;
+  if (x < 200) return Math.round(x / 10) * 10;
+  if (x < 500) return Math.round(x / 25) * 25;
+  return Math.round(x / 50) * 50;
+}
+
+function adjustForCondition(prices, items) {
+  const upperText = items.map(i => `${i.title} ${i.snippet || ''}`.toUpperCase());
+  const newRatio = upperText.filter(t => /(NUOV[OA]|CON ETICHETTA|NEW|SEALED|WITH TAGS|NWT|BNWT)/.test(t)).length / Math.max(1, upperText.length);
+  const { filtered } = robustStats(prices);
+  let baseMedian = robustStats(filtered).median;
+  if (baseMedian == null) return { suggested: null, baseMedian, newRatio };
+  if (newRatio < 0.15) {
+    const trimmed = filtered.filter(v => v <= baseMedian * 1.35);
+    baseMedian = robustStats(trimmed).median || baseMedian;
+  }
+  return { suggested: humanRound(baseMedian), baseMedian, newRatio };
+}
+
+async function googleVisionAnnotate(imageBase64) {
+  const body = {
+    requests: [{
+      image: { content: imageBase64 },
+      features: [
+        { type: 'LOGO_DETECTION',  maxResults: 3 },
+        { type: 'LABEL_DETECTION', maxResults: 10 },
+        { type: 'TEXT_DETECTION',  maxResults: 1 }
+      ]
+    }]
+  };
+  const { data } = await axios.post(
+    `${VISION_ENDPOINT}?key=${encodeURIComponent(ENV.GOOGLE_VISION_API_KEY)}`,
+    body,
+    { timeout: 12000 }
+  );
+  const r = data.responses?.[0] || {};
+  return {
+    labels: r.labelAnnotations || [],
+    logos:  r.logoAnnotations  || [],
+    text:   r.fullTextAnnotation?.text || r.textAnnotations?.[0]?.description || ''
+  };
+}
+
+async function serpSearch({ query, site, num }) {
+  const params = new URLSearchParams({
+    engine: 'google',
+    q: `${query} site:${site}`,
+    hl: 'it', gl: 'it', num: String(num || 10),
+    api_key: ENV.SERP_API_KEY
+  });
+  const url = `https://serpapi.com/search.json?${params.toString()}`;
+  const { data } = await axios.get(url, { timeout: 15000 });
+
+  const organic = (data.organic_results || []).map(r => ({
+    title: r.title, link: r.link, snippet: r.snippet, price_str: r.price || r.snippet
+  }));
+  const shopping = (data.shopping_results || []).map(s => ({
+    title: s.title, link: s.link,
+    snippet: `${s.source || ''} ${s.extracted_price ? `€${s.extracted_price}` : ''}`,
+    price_str: s.price || (s.extracted_price ? `€${s.extracted_price}` : '')
+  }));
+  return [...shopping, ...organic];
+}
+
+function dedupeByLink(items) {
+  const seen = new Set(); const out = [];
+  for (const it of items) {
+    if (!it.link) continue;
+    const key = it.link.split('?')[0];
+    if (seen.has(key)) continue;
+    seen.add(key); out.push(it);
+  }
+  return out;
+}
+
+// ---------------- Route ----------------
+app.post('/search/image', async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "Missing image file (field 'image')" });
-    if (!BING_VS_KEY) return res.status(500).json({ error: "BING_VS_KEY missing" });
+    const { imageBase64 } = req.body;
+    if (!imageBase64) return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
 
-    // 1) invia l’immagine a Bing Visual Search
-    const form = new FormData();
-    form.append("image", req.file.buffer, { filename: req.file.originalname || "upload.jpg" });
-
-    const { data } = await axios.post(`${BING_VS_ENDPOINT}?mkt=it-IT`, form, {
-      headers: {
-        ...form.getHeaders(),
-        "Ocp-Apim-Subscription-Key": BING_VS_KEY,
-      },
-      timeout: 15000,
-    });
-
-    // 2) estrai le pagine che includono l’immagine e filtra per domini whitelist
-    const items = [];
-    const tags = data?.tags || [];
-    const whitelistHosts = ["ebay.it", "ebay.fr", "subito.it", "leboncoin.fr"];
-
-    const pushIfWhitelisted = (url, title) => {
-      try {
-        const host = new URL(url).hostname;
-        const ok = whitelistHosts.some((h) => host.includes(h));
-        if (!ok) return;
-
-        const txt = `${title || ""}`;
-        const m = txt.match(/(\d+(?:[.,]\d{1,2})?)\s?€/);
-        const price = m ? parseFloat(m[1].replace(/\./g, "").replace(",", ".")) : 0;
-        const country = host.includes("fr") ? "FRANCIA" : "ITALIA";
-
-        items.push({
-          source: "ImageSearch",
-          country,
-          title: title || url,
-          description: null,
-          price,
-          shipping: null,
-          currency: "EUR",
-          url,
-          isNew: /con\s*etichetta|mai\s*usato|sigillat|comme\s*neuf/i.test(txt),
-          isAuction: /asta|ench[eè]re|auction|bid/i.test(txt),
-        });
-      } catch (_) {}
-    };
-
-    for (const tag of tags) {
-      for (const action of tag.actions || []) {
-        // Tipi comuni: PagesIncluding, VisualSearch, ProductVisualSearch, ShoppingSources
-        const val = action?.data?.value || action?.data || [];
-        if (Array.isArray(val)) {
-          for (const v of val) {
-            const url = v?.hostPageUrl || v?.webSearchUrl || v?.url;
-            const title = v?.name || v?.hostPageDisplayUrl || v?.description;
-            if (url) pushIfWhitelisted(url, title);
-          }
-        }
-      }
+    const vision = await googleVisionAnnotate(imageBase64);
+    const query = extractCandidateQuery(vision);
+    if (!query) {
+      return res.json({ success: true, query: null, message: 'Nessuna query ricavabile dalla foto', suggestions: [] });
     }
 
-    return res.json({ items });
-  } catch (e) {
-    console.error("Image search error", e?.message);
-    return res.status(500).json({ error: "Image search failed" });
+    const sites = ['ebay.it', 'www.subito.it'];
+    const results = [];
+    for (const site of sites) {
+      try {
+        const r = await serpSearch({ query, site, num: ENV.MAX_RESULTS_PER_SITE });
+        results.push(...r);
+        await sleep(500);
+      } catch (e) { console.warn(`SERP fallita per ${site}:`, e.message); }
+    }
+
+    const clean = dedupeByLink(results).slice(0, 80);
+    const prices = clean.map(it => parseMoney(it.price_str || it.title || it.snippet)).filter(Number.isFinite);
+    const { suggested, baseMedian, newRatio } = adjustForCondition(prices, clean);
+
+    res.json({
+      success: true,
+      query,
+      visionPreview: {
+        brand: vision.logos?.[0]?.description || null,
+        topLabels: vision.labels?.slice(0, 5).map(l => `${l.description} (${(l.score*100|0)}%)`)
+      },
+      stats: { countFound: clean.length, countPriced: prices.length, baseMedian, newMentionRatio: newRatio },
+      suggestedPrice: suggested,
+      currency: ENV.PRICE_CURRENCY,
+      examples: clean.slice(0, 15)
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-// ▶️ AVVIO
-app.listen(PORT, () => console.log(`API listening on :${PORT}`));
+app.get('/health', (_, res) => res.send('OK'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`API avviata su :${PORT}`));
