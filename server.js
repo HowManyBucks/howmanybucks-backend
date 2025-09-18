@@ -1,8 +1,26 @@
 import express from 'express';
 import axios from 'axios';
+import cors from 'cors';
 import fs from 'fs';
 
 const app = express();
+
+// CORS per Flutter Web (tutte le porte localhost) + eventuali domini prod
+app.use(cors({
+  origin: [
+    /^http:\/\/localhost:\d+$/,      // qualsiasi porta localhost
+    /^http:\/\/127\.0\.0\.1:\d+$/,   // qualsiasi porta 127.0.0.1
+    // aggiungi qui il dominio web di produzione se/quando lo avrai
+    // 'https://quanto-costa.example.com'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+  credentials: false
+}));
+
+// Preflight
+app.options('*', cors());
+
 app.use(express.json({ limit: '15mb' }));
 
 const VISION_ENDPOINT = 'https://vision.googleapis.com/v1/images:annotate';
