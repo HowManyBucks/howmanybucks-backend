@@ -10,8 +10,7 @@ app.use(cors({
   origin: [
     /^http:\/\/localhost:\d+$/,      // qualsiasi porta localhost
     /^http:\/\/127\.0\.0\.1:\d+$/,   // qualsiasi porta 127.0.0.1
-    // aggiungi qui il dominio web di produzione se/quando lo avrai
-    // 'https://quanto-costa.example.com'
+    'https://howmanybucks.com',
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
