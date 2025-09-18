@@ -1,0 +1,1096 @@
+{
+  "countries": {
+    "AR": {
+      "hl": "es",
+      "gl": "ar",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.mercadolibre.com.ar",
+          "type": "general",
+          "weight": 1.0
+        }
+      ]
+    },
+    "AU": {
+      "hl": "en",
+      "gl": "au",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.depop.com",
+          "type": "apparel",
+          "weight": 0.85
+        },
+        {
+          "domain": "www.ebay.com.au",
+          "type": "general",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.gumtree.com.au",
+          "type": "classifieds",
+          "weight": 0.9
+        }
+      ]
+    },
+    "BR": {
+      "hl": "pt",
+      "gl": "br",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.enjoei.com.br",
+          "type": "apparel",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.mercadolivre.com.br",
+          "type": "general",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.olx.com.br",
+          "type": "classifieds",
+          "weight": 0.95
+        }
+      ]
+    },
+    "CA": {
+      "hl": "en",
+      "gl": "ca",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.depop.com",
+          "type": "apparel",
+          "weight": 0.85
+        },
+        {
+          "domain": "www.ebay.ca",
+          "type": "general",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.etsy.com",
+          "type": "vintage",
+          "weight": 0.7
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.kijiji.ca",
+          "type": "classifieds",
+          "weight": 1.0
+        }
+      ]
+    },
+    "DE": {
+      "hl": "de",
+      "gl": "de",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.ebay.de",
+          "type": "general",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.kleinanzeigen.de",
+          "type": "classifieds",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.vinted.de",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "ES": {
+      "hl": "es",
+      "gl": "es",
+      "sites": [
+        {
+          "domain": "es.wallapop.com",
+          "type": "classifieds",
+          "weight": 1.0
+        },
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.ebay.es",
+          "type": "general",
+          "weight": 0.85
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.milanuncios.com",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.vinted.es",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "FR": {
+      "hl": "fr",
+      "gl": "fr",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.ebay.fr",
+          "type": "general",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.leboncoin.fr",
+          "type": "classifieds",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.vestiairecollective.com",
+          "type": "luxury",
+          "weight": 0.8
+        },
+        {
+          "domain": "www.vinted.fr",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "GB": {
+      "hl": "en",
+      "gl": "gb",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.depop.com",
+          "type": "apparel",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.ebay.co.uk",
+          "type": "general",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.gumtree.com",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.vinted.co.uk",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "IE": {
+      "hl": "en",
+      "gl": "ie",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.adverts.ie",
+          "type": "classifieds",
+          "weight": 0.8
+        },
+        {
+          "domain": "www.ebay.ie",
+          "type": "general",
+          "weight": 0.7
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        }
+      ]
+    },
+    "IN": {
+      "hl": "en",
+      "gl": "in",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.olx.in",
+          "type": "classifieds",
+          "weight": 0.8
+        }
+      ]
+    },
+    "IT": {
+      "hl": "it",
+      "gl": "it",
+      "sites": [
+        {
+          "domain": "ebay.it",
+          "type": "general",
+          "weight": 0.9
+        },
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.depop.com",
+          "type": "apparel",
+          "weight": 0.8
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.grailed.com",
+          "type": "streetwear",
+          "weight": 0.6
+        },
+        {
+          "domain": "www.subito.it",
+          "type": "classifieds",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.vestiairecollective.com",
+          "type": "luxury",
+          "weight": 0.7
+        },
+        {
+          "domain": "www.vinted.it",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "JP": {
+      "hl": "ja",
+      "gl": "jp",
+      "sites": [
+        {
+          "domain": "auctions.yahoo.co.jp",
+          "type": "auctions",
+          "weight": 1.0
+        },
+        {
+          "domain": "jp.mercari.com",
+          "type": "general",
+          "weight": 1.0
+        },
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "rakuma.rakuten.co.jp",
+          "type": "general",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        }
+      ]
+    },
+    "MX": {
+      "hl": "es",
+      "gl": "mx",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.mercadolibre.com.mx",
+          "type": "general",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.segundamano.mx",
+          "type": "classifieds",
+          "weight": 0.9
+        }
+      ]
+    },
+    "NL": {
+      "hl": "nl",
+      "gl": "nl",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.ebay.nl",
+          "type": "general",
+          "weight": 0.7
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.marktplaats.nl",
+          "type": "classifieds",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.vinted.nl",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "NZ": {
+      "hl": "en",
+      "gl": "nz",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.trademe.co.nz",
+          "type": "general",
+          "weight": 1.0
+        }
+      ]
+    },
+    "PL": {
+      "hl": "pl",
+      "gl": "pl",
+      "sites": [
+        {
+          "domain": "allegro.pl",
+          "type": "general",
+          "weight": 1.0
+        },
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.olx.pl",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.vinted.pl",
+          "type": "apparel",
+          "weight": 1.0
+        }
+      ]
+    },
+    "US": {
+      "hl": "en",
+      "gl": "us",
+      "sites": [
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.9
+        },
+        {
+          "domain": "offerup.com",
+          "type": "classifieds",
+          "weight": 0.8
+        },
+        {
+          "domain": "poshmark.com",
+          "type": "apparel",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.depop.com",
+          "type": "apparel",
+          "weight": 0.9
+        },
+        {
+          "domain": "www.ebay.com",
+          "type": "general",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.etsy.com",
+          "type": "vintage",
+          "weight": 0.7
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.95
+        },
+        {
+          "domain": "www.grailed.com",
+          "type": "streetwear",
+          "weight": 1.0
+        },
+        {
+          "domain": "www.mercari.com",
+          "type": "general",
+          "weight": 0.95
+        }
+      ]
+    }
+  },
+  "continents": {
+    "Asia": [
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "IN"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "IN"
+      },
+      {
+        "domain": "www.olx.in",
+        "type": "classifieds",
+        "weight": 0.8,
+        "country": "IN"
+      },
+      {
+        "domain": "auctions.yahoo.co.jp",
+        "type": "auctions",
+        "weight": 1.0,
+        "country": "JP"
+      },
+      {
+        "domain": "jp.mercari.com",
+        "type": "general",
+        "weight": 1.0,
+        "country": "JP"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "JP"
+      },
+      {
+        "domain": "rakuma.rakuten.co.jp",
+        "type": "general",
+        "weight": 0.9,
+        "country": "JP"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "JP"
+      }
+    ],
+    "Europe": [
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "DE"
+      },
+      {
+        "domain": "www.ebay.de",
+        "type": "general",
+        "weight": 0.9,
+        "country": "DE"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "DE"
+      },
+      {
+        "domain": "www.kleinanzeigen.de",
+        "type": "classifieds",
+        "weight": 1.0,
+        "country": "DE"
+      },
+      {
+        "domain": "www.vinted.de",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "DE"
+      },
+      {
+        "domain": "es.wallapop.com",
+        "type": "classifieds",
+        "weight": 1.0,
+        "country": "ES"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "ES"
+      },
+      {
+        "domain": "www.ebay.es",
+        "type": "general",
+        "weight": 0.85,
+        "country": "ES"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "ES"
+      },
+      {
+        "domain": "www.milanuncios.com",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "ES"
+      },
+      {
+        "domain": "www.vinted.es",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "ES"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "FR"
+      },
+      {
+        "domain": "www.ebay.fr",
+        "type": "general",
+        "weight": 0.9,
+        "country": "FR"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "FR"
+      },
+      {
+        "domain": "www.leboncoin.fr",
+        "type": "classifieds",
+        "weight": 1.0,
+        "country": "FR"
+      },
+      {
+        "domain": "www.vestiairecollective.com",
+        "type": "luxury",
+        "weight": 0.8,
+        "country": "FR"
+      },
+      {
+        "domain": "www.vinted.fr",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "FR"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "GB"
+      },
+      {
+        "domain": "www.depop.com",
+        "type": "apparel",
+        "weight": 0.9,
+        "country": "GB"
+      },
+      {
+        "domain": "www.ebay.co.uk",
+        "type": "general",
+        "weight": 0.95,
+        "country": "GB"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "GB"
+      },
+      {
+        "domain": "www.gumtree.com",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "GB"
+      },
+      {
+        "domain": "www.vinted.co.uk",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "GB"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "IE"
+      },
+      {
+        "domain": "www.adverts.ie",
+        "type": "classifieds",
+        "weight": 0.8,
+        "country": "IE"
+      },
+      {
+        "domain": "www.ebay.ie",
+        "type": "general",
+        "weight": 0.7,
+        "country": "IE"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "IE"
+      },
+      {
+        "domain": "ebay.it",
+        "type": "general",
+        "weight": 0.9,
+        "country": "IT"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "IT"
+      },
+      {
+        "domain": "www.depop.com",
+        "type": "apparel",
+        "weight": 0.8,
+        "country": "IT"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "IT"
+      },
+      {
+        "domain": "www.grailed.com",
+        "type": "streetwear",
+        "weight": 0.6,
+        "country": "IT"
+      },
+      {
+        "domain": "www.subito.it",
+        "type": "classifieds",
+        "weight": 1.0,
+        "country": "IT"
+      },
+      {
+        "domain": "www.vestiairecollective.com",
+        "type": "luxury",
+        "weight": 0.7,
+        "country": "IT"
+      },
+      {
+        "domain": "www.vinted.it",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "IT"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "NL"
+      },
+      {
+        "domain": "www.ebay.nl",
+        "type": "general",
+        "weight": 0.7,
+        "country": "NL"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "NL"
+      },
+      {
+        "domain": "www.marktplaats.nl",
+        "type": "classifieds",
+        "weight": 1.0,
+        "country": "NL"
+      },
+      {
+        "domain": "www.vinted.nl",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "NL"
+      },
+      {
+        "domain": "allegro.pl",
+        "type": "general",
+        "weight": 1.0,
+        "country": "PL"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "PL"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "PL"
+      },
+      {
+        "domain": "www.olx.pl",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "PL"
+      },
+      {
+        "domain": "www.vinted.pl",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "PL"
+      }
+    ],
+    "North America": [
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "CA"
+      },
+      {
+        "domain": "www.depop.com",
+        "type": "apparel",
+        "weight": 0.85,
+        "country": "CA"
+      },
+      {
+        "domain": "www.ebay.ca",
+        "type": "general",
+        "weight": 0.95,
+        "country": "CA"
+      },
+      {
+        "domain": "www.etsy.com",
+        "type": "vintage",
+        "weight": 0.7,
+        "country": "CA"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "CA"
+      },
+      {
+        "domain": "www.kijiji.ca",
+        "type": "classifieds",
+        "weight": 1.0,
+        "country": "CA"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "US"
+      },
+      {
+        "domain": "offerup.com",
+        "type": "classifieds",
+        "weight": 0.8,
+        "country": "US"
+      },
+      {
+        "domain": "poshmark.com",
+        "type": "apparel",
+        "weight": 1.0,
+        "country": "US"
+      },
+      {
+        "domain": "www.depop.com",
+        "type": "apparel",
+        "weight": 0.9,
+        "country": "US"
+      },
+      {
+        "domain": "www.ebay.com",
+        "type": "general",
+        "weight": 1.0,
+        "country": "US"
+      },
+      {
+        "domain": "www.etsy.com",
+        "type": "vintage",
+        "weight": 0.7,
+        "country": "US"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "US"
+      },
+      {
+        "domain": "www.grailed.com",
+        "type": "streetwear",
+        "weight": 1.0,
+        "country": "US"
+      },
+      {
+        "domain": "www.mercari.com",
+        "type": "general",
+        "weight": 0.95,
+        "country": "US"
+      }
+    ],
+    "Oceania": [
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "AU"
+      },
+      {
+        "domain": "www.depop.com",
+        "type": "apparel",
+        "weight": 0.85,
+        "country": "AU"
+      },
+      {
+        "domain": "www.ebay.com.au",
+        "type": "general",
+        "weight": 0.95,
+        "country": "AU"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "AU"
+      },
+      {
+        "domain": "www.gumtree.com.au",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "AU"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "NZ"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "NZ"
+      },
+      {
+        "domain": "www.trademe.co.nz",
+        "type": "general",
+        "weight": 1.0,
+        "country": "NZ"
+      }
+    ],
+    "South America": [
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "AR"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "AR"
+      },
+      {
+        "domain": "www.mercadolibre.com.ar",
+        "type": "general",
+        "weight": 1.0,
+        "country": "AR"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "BR"
+      },
+      {
+        "domain": "www.enjoei.com.br",
+        "type": "apparel",
+        "weight": 0.9,
+        "country": "BR"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "BR"
+      },
+      {
+        "domain": "www.mercadolivre.com.br",
+        "type": "general",
+        "weight": 1.0,
+        "country": "BR"
+      },
+      {
+        "domain": "www.olx.com.br",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "BR"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "MX"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.95,
+        "country": "MX"
+      },
+      {
+        "domain": "www.mercadolibre.com.mx",
+        "type": "general",
+        "weight": 1.0,
+        "country": "MX"
+      },
+      {
+        "domain": "www.segundamano.mx",
+        "type": "classifieds",
+        "weight": 0.9,
+        "country": "MX"
+      }
+    ]
+  },
+  "blacklist_domains": [
+    "it.pinterest.com",
+    "m.youtube.com",
+    "pinterest.*",
+    "twitter.com",
+    "www.reddit.com",
+    "www.wikipedia.org",
+    "www.youtube.com",
+    "x.com"
+  ]
+}
