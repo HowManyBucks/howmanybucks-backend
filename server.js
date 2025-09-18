@@ -5,7 +5,7 @@ import fs from 'fs';
 
 const app = express();
 
-// CORS per Flutter web (qualsiasi porta localhost/127.0.0.1) + dominio prod
+// CORS: localhost (qualsiasi porta) + dominio prod
 app.use(cors({
   origin: [
     /^http:\/\/localhost:\d+$/,
@@ -30,16 +30,17 @@ const ENV = {
   PRICE_CURRENCY: process.env.PRICE_CURRENCY || 'EUR',
   MAX_RESULTS_PER_SITE: parseInt(process.env.MAX_RESULTS_PER_SITE || '25', 10),
   MARKETPLACES_CONFIG_PATH: process.env.MARKETPLACES_CONFIG_PATH || './marketplaces_config.json',
+  STRICT_BRAND_DEFAULT: (process.env.STRICT_BRAND || 'true').toLowerCase() === 'true',
 };
 
-// ============ CONFIG MARKETPLACES ============
+// ===== CONFIG MARKETPLACES =====
 let MP = { countries: {}, continents: {}, blacklist_domains: [] };
 try {
   const raw = fs.readFileSync(ENV.MARKETPLACES_CONFIG_PATH, 'utf-8');
   MP = JSON.parse(raw);
   console.log('[CONFIG] marketplaces_config.json caricato.');
-} catch (e) {
-  console.warn('[CONFIG] marketplaces_config.json non trovato: uso fallback minimo IT.');
+} catch {
+  console.warn('[CONFIG] marketplaces_config.json non trovato: fallback IT.');
   MP = {
     countries: {
       IT: {
@@ -57,7 +58,7 @@ try {
   };
 }
 
-// ============ UTILS ============
+// ===== UTILS =====
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const norm = s => (s || '')
   .normalize('NFKD')
@@ -86,7 +87,7 @@ function domainOf(urlStr) {
   }
 }
 
-// ============ LEXICON / NORMALIZATION ============
+// ===== LEXICON =====
 const STOPWORDS = new Set([
   'textile','fabric','clothing','apparel','garment','sleeve','long','short','active','sports','sport','athletic',
   'men','man','male','woman','women','female','kids','boy','girl','youth','child','children','unisex',
@@ -154,7 +155,7 @@ const nearestBasicColorName = rgb => {
   return best;
 };
 
-// ============ VISION ============
+// ===== VISION =====
 async function googleVisionAnnotate(imageBase64) {
   const body = {
     requests: [{
@@ -188,7 +189,7 @@ const colorFromVision = colors => {
   return nearestBasicColorName([r,g,b]);
 };
 
-// ============ QUERY BUILDER (precedenza: marca form > marca+modello > marca+logo > logo) ============
+// ===== QUERY BUILDER (precedenza: marca form > marca+modello > marca+logo > logo) =====
 function buildCandidateQueries(form, vision) {
   const formBrand  = form.brand ? norm(form.brand) : '';
   const formModel  = form.model ? norm(form.model) : '';
@@ -212,32 +213,26 @@ function buildCandidateQueries(form, vision) {
 
   const Q = [];
 
-  // 1) marca form (forte)
   if (formBrand) {
-    // 2) marca + modello
     if (formModel) {
       Q.push(J(formBrand, formModel, patToken, colorToken, formGender, catToken));
       Q.push(J(formBrand, formModel, colorToken, catToken));
       Q.push(J(formBrand, formModel, catToken));
     }
-    // 3) marca form + logo vision (se diverso, come arricchimento)
     if (logoBrand && logoBrand !== formBrand) {
       Q.push(J(formBrand, logoBrand, colorToken, catToken));
     }
-    // marca secca + contesti
     Q.push(J(formBrand, patToken, colorToken, formGender, catToken));
     Q.push(J(formBrand, colorToken, catToken));
     Q.push(J(formBrand, catToken));
   }
 
-  // 4) solo logo vision (se non c'è marca form)
   if (!formBrand && logoBrand) {
     Q.push(J(logoBrand, ocrTokens.slice(0,2).join(' '), colorToken, formGender, catToken));
     Q.push(J(logoBrand, colorToken, catToken));
     Q.push(J(logoBrand, catToken));
   }
 
-  // OCR/labels come supporto
   if (ocrTokens.length) Q.push(J(ocrTokens.slice(0,3).join(' '), colorToken, formGender, catToken));
   if (strongLbls.length) Q.push(J(strongLbls.slice(0,3).join(' '), colorToken, formGender, catToken));
 
@@ -247,7 +242,7 @@ function buildCandidateQueries(form, vision) {
   return { queries, brandResolved };
 }
 
-// ============ SERP HELPERS ============
+// ===== SERP HELPERS =====
 async function serpSearch({ query, site, num, hl='it', gl='it' }) {
   const params = new URLSearchParams({
     engine: 'google',
@@ -294,7 +289,7 @@ const dedupeByLink = items => {
   return out;
 };
 
-// ============ SCORING & PRICE ============
+// ===== SCORING & PRICE =====
 const parseMoney = s => {
   if (!s) return null;
   const m = s.replace(/[^\d,.\-]/g, '').replace(',', '.').match(/-?\d+(\.\d+)?/);
@@ -324,11 +319,8 @@ const humanRound = x => {
 function scoreItem(it, ctx) {
   const title = norm(`${it.title || ''} ${it.snippet || ''}`);
   let s = 0;
-
-  // Boost forti su brand/modello
   if (ctx.brand && containsWord(title, ctx.brand)) s += 40;
   if (ctx.model && containsWord(title, ctx.model)) s += 28;
-
   if (ctx.color && containsWord(title, ctx.color)) s += 6;
 
   if (ctx.gender) {
@@ -347,7 +339,6 @@ function scoreItem(it, ctx) {
   }
   if (ctx.category && containsWord(title, ctx.category)) s += 4;
 
-  // Penalità: se nel form c'è brand, penalizza altri brand noti
   if (ctx.brand) {
     const notThisBrand = ['nike','adidas','puma','reebok','new balance','under armour','levi','h&m','zara','gucci','prada','armani','dolce',
       'diesel','fila','kappa','the north face','north face','patagonia','ralph lauren','lacoste','superdry','harley davidson']
@@ -355,15 +346,30 @@ function scoreItem(it, ctx) {
     if (notThisBrand.some(b => containsWord(title, b))) s -= 25;
   }
 
-  // Boost sito locale
   const d = domainOf(it.link);
   const w = ctx.siteWeights[d] || 0;
   s += Math.min(8, Math.round(w * 6));
-
   return Math.max(0, Math.min(100, s));
 }
 
-// ============ CONTEXT ============
+// ===== CONDITION HEURISTIC =====
+function applyConditionHeuristic(prices, items, condition) {
+  if (condition === 'new' || condition === 'used') {
+    const { filtered } = robustStats(prices);
+    return { baseMedian: robustStats(filtered).median, mode: condition, newRatio: null };
+  }
+  const upperText = items.map(i => `${i.title} ${i.snippet || ''}`.toUpperCase());
+  const newRatio = upperText.filter(t => NEW_HINT.test(t)).length / Math.max(1, upperText.length);
+  const { filtered } = robustStats(prices);
+  let baseMedian = robustStats(filtered).median;
+  if (baseMedian != null && newRatio < 0.15) {
+    const trimmed = filtered.filter(v => v <= baseMedian * 1.35);
+    baseMedian = robustStats(trimmed).median || baseMedian;
+  }
+  return { baseMedian, mode: 'auto', newRatio };
+}
+
+// ===== CONTEXT (paese/siti) =====
 function getSearchContext({ country, continent }) {
   if (country && MP.countries[country]) {
     const { hl, gl, sites } = MP.countries[country];
@@ -375,15 +381,14 @@ function getSearchContext({ country, continent }) {
   if (continent && MP.continents[continent]) {
     const byDomain = {};
     for (const n of MP.continents[continent]) {
-      const key = n.domain.replace(/^www\./,'');
-      const w = n.weight || 0;
+      const key = n.domain.replace(/^www\./,''); const w = n.weight || 0;
       byDomain[key] = Math.max(byDomain[key] || 0, w);
     }
     const sorted = Object.entries(byDomain).sort((a,b)=> b[1]-a[1]).slice(0, 8);
     const siteList = sorted.map(([d]) => d);
     const siteWeights = Object.fromEntries(sorted);
-    const fallback = MP.countries[ENV.PRICE_COUNTRY] || { hl:'en', gl:'us' };
-    return { hl: fallback.hl, gl: fallback.gl, siteList, siteWeights };
+    const fb = MP.countries[ENV.PRICE_COUNTRY] || { hl:'en', gl:'us' };
+    return { hl: fb.hl, gl: fb.gl, siteList, siteWeights };
   }
   const fb = MP.countries[ENV.PRICE_COUNTRY] || { hl:'en', gl:'us', sites: [] };
   const sorted = (fb.sites||[]).sort((a,b)=> (b.weight||0)-(a.weight||0));
@@ -401,38 +406,15 @@ const isBlacklisted = (host) => {
     return h === b || h.endsWith('.'+b);
   });
 };
-// ============ CONDITION HEURISTIC ============
 
-function applyConditionHeuristic(prices, items, condition) {
-  // Se l’utente forza new/used, usa quella modalità
-  if (condition === 'new' || condition === 'used') {
-    const { filtered } = robustStats(prices);
-    return { baseMedian: robustStats(filtered).median, mode: condition, newRatio: null };
-  }
-  // Heuristica “auto”: capisci se prevale il nuovo
-  const upperText = items.map(i => `${i.title} ${i.snippet || ''}`.toUpperCase());
-  const newRatio = upperText.filter(t => NEW_HINT.test(t)).length / Math.max(1, upperText.length);
-
-  // Statistiche robuste + piccolo taglio se dominano outlier alti
-  const { filtered } = robustStats(prices);
-  let baseMedian = robustStats(filtered).median;
-  if (baseMedian != null && newRatio < 0.15) {
-    const trimmed = filtered.filter(v => v <= baseMedian * 1.35);
-    baseMedian = robustStats(trimmed).median || baseMedian;
-  }
-  return { baseMedian, mode: 'auto', newRatio };
-}
-// ============ ROUTES ============
+// ===== ROUTES =====
 app.get('/', (_, res) => {
-  res.type('html').send(`
-    <h1>HOWMANYBUCKS – Backend</h1>
-    <ul>
-      <li><a href="/health">/health</a></li>
-      <li>POST /search/image – JSON con <code>imageBase64</code> (+ campi form)</li>
-    </ul>
-  `);
+  res.type('html').send(`<h1>HOWMANYBUCKS – Backend</h1>
+  <ul>
+    <li><a href="/health">/health</a></li>
+    <li>POST /search/image</li>
+  </ul>`);
 });
-
 app.get('/health', (_, res) => res.send('OK'));
 
 app.post('/search/image', async (req, res) => {
@@ -441,61 +423,52 @@ app.post('/search/image', async (req, res) => {
       imageBase64,
       includeShopping = false,
       condition = 'auto',
-      // Form utente
       brand = '', model = '', category = 't-shirt', pattern = '',
       gender = '', color = '',
-      // Scope geografico
-      country = '',
-      continent = '',
-      // K (facoltativo)
-      kFactor = null
+      country = '', continent = '',
+      kFactor = null,
+      strictBrand: strictBrandFromClient = null,
     } = req.body || {};
 
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
 
-    // 0) contesto paesi/siti
+    // Geo
     const ctxGeo = getSearchContext({ country, continent });
     const { hl, gl, siteList, siteWeights } = ctxGeo;
     const TOP_SITES = Math.min(siteList.length, 6);
 
-    // 1) Vision
+    // Vision
     const vision = await googleVisionAnnotate(imageBase64);
 
-    // 2) Query candidates + brandResolved
+    // Query
     const qb = buildCandidateQueries({ brand, model, category, pattern, gender, color }, vision);
     const queries = qb.queries;
     const brandResolved = qb.brandResolved;
 
-    let merged = [];
-    let usedQuery = null;
-
-    // 3) Prova query dalla più specifica
+    // Crawl SERP
+    let merged = [], usedQuery = null;
     for (const q of queries) {
       const step = [];
       for (const site of siteList.slice(0, TOP_SITES)) {
         try {
           const r = await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl });
-          step.push(...r);
-          await sleep(300);
-        } catch (e) { /* ignora singolo sito */ }
+          step.push(...r); await sleep(300);
+        } catch {}
       }
       if (includeShopping) {
         try {
           const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
-          const shopFiltered = shop.filter(it => !isBlacklisted(domainOf(it.link)));
-          step.push(...shopFiltered);
+          step.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
         } catch {}
       }
       const deduped = dedupeByLink(step);
       const priced = deduped.filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
       if (priced.length >= 6) { merged = deduped; usedQuery = q; break; }
     }
-
     if (!merged.length) {
-      const q = queries[0];
-      let fb = [];
+      const q = queries[0]; let fb = [];
       for (const site of siteList.slice(0, TOP_SITES)) {
         try { fb.push(...await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl })); } catch {}
       }
@@ -505,11 +478,10 @@ app.post('/search/image', async (req, res) => {
           fb.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
         } catch {}
       }
-      merged = dedupeByLink(fb);
-      usedQuery = q;
+      merged = dedupeByLink(fb); usedQuery = q;
     }
 
-    // 4) Filtra non-whitelist e blacklist
+    // Whitelist + blacklist
     const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
     const filteredWL = merged.filter(it => {
       const d = domainOf(it.link);
@@ -518,17 +490,20 @@ app.post('/search/image', async (req, res) => {
       return whiteSet.has(d.replace(/^www\./,'')) || includeShopping;
     });
 
-    // 4b) Hard filter sul brand se specificato (con fallback se troppo stretto)
+    // Hard filter brand
+    const strictBrand = strictBrandFromClient === null
+      ? ENV.STRICT_BRAND_DEFAULT
+      : !!strictBrandFromClient;
+
     let filteredStrict = filteredWL;
     if (brand) {
-      filteredStrict = filteredWL.filter(it => {
-        const t = `${it.title||''} ${it.snippet||''}`;
-        return containsWord(t, brand);
-      });
-      if (filteredStrict.length < 6) filteredStrict = filteredWL;
+      const onlyBrand = filteredWL.filter(it => containsWord(`${it.title||''} ${it.snippet||''}`, brand));
+      filteredStrict = strictBrand
+        ? onlyBrand                             // nessun fallback
+        : (onlyBrand.length >= 12 ? onlyBrand : filteredWL); // fallback morbido
     }
 
-    // 5) Re-ranking
+    // Ranking
     const contextScore = {
       brand, model, gender, color: color || colorFromVision(vision.colors) || '', category,
       siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
@@ -536,14 +511,13 @@ app.post('/search/image', async (req, res) => {
     const ranked = [...filteredStrict].map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
                                       .sort((a,b) => b._score - a._score);
 
-    // 6) Prezzi
+    // Prezzi
     const TOP_N = 40;
     const topForPricing = ranked.slice(0, TOP_N);
     const prices = topForPricing.map(it => parseMoney(it.price_str || it.title || it.snippet)).filter(Number.isFinite);
     const { baseMedian, mode, newRatio } = applyConditionHeuristic(prices, topForPricing, condition);
     const suggested = humanRound(baseMedian);
 
-    // kFactor
     const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
     const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
 
@@ -559,7 +533,8 @@ app.post('/search/image', async (req, res) => {
         textHint: vision.text?.slice(0, 120) || null,
         colorGuess: colorFromVision(vision.colors) || null
       },
-      params: { includeShopping: !!includeShopping, condition: mode, form: { brand, model, category, pattern, gender, color: contextScore.color }, kFactor: kVal },
+      params: { includeShopping: !!includeShopping, condition: mode, strictBrand,
+        form: { brand, model, category, pattern, gender, color: contextScore.color }, kFactor: kVal },
       note: (!brand && !model) ? 'Per un’analisi più puntuale, indica marca e/o modello nel form.' : null,
       stats: {
         resultsFound: merged.length,
