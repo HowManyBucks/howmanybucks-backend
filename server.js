@@ -401,7 +401,27 @@ const isBlacklisted = (host) => {
     return h === b || h.endsWith('.'+b);
   });
 };
+// ============ CONDITION HEURISTIC ============
 
+function applyConditionHeuristic(prices, items, condition) {
+  // Se l’utente forza new/used, usa quella modalità
+  if (condition === 'new' || condition === 'used') {
+    const { filtered } = robustStats(prices);
+    return { baseMedian: robustStats(filtered).median, mode: condition, newRatio: null };
+  }
+  // Heuristica “auto”: capisci se prevale il nuovo
+  const upperText = items.map(i => `${i.title} ${i.snippet || ''}`.toUpperCase());
+  const newRatio = upperText.filter(t => NEW_HINT.test(t)).length / Math.max(1, upperText.length);
+
+  // Statistiche robuste + piccolo taglio se dominano outlier alti
+  const { filtered } = robustStats(prices);
+  let baseMedian = robustStats(filtered).median;
+  if (baseMedian != null && newRatio < 0.15) {
+    const trimmed = filtered.filter(v => v <= baseMedian * 1.35);
+    baseMedian = robustStats(trimmed).median || baseMedian;
+  }
+  return { baseMedian, mode: 'auto', newRatio };
+}
 // ============ ROUTES ============
 app.get('/', (_, res) => {
   res.type('html').send(`
