@@ -5,21 +5,20 @@ import fs from 'fs';
 
 const app = express();
 
-// CORS per Flutter Web (tutte le porte localhost) + eventuali domini prod
+// CORS per Flutter web (qualsiasi porta localhost/127.0.0.1) + dominio prod
 app.use(cors({
   origin: [
-    /^http:\/\/localhost:\d+$/,      // qualsiasi porta localhost
-    /^http:\/\/127\.0\.0\.1:\d+$/,   // qualsiasi porta 127.0.0.1
+    /^http:\/\/localhost:\d+$/,
+    /^http:\/\/127\.0\.0\.1:\d+$/,
     'https://howmanybucks.com',
   ],
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type'],
   credentials: false
 }));
-
-// Preflight
 app.options('*', cors());
 
+// JSON parser
 app.use(express.json({ limit: '15mb' }));
 
 const VISION_ENDPOINT = 'https://vision.googleapis.com/v1/images:annotate';
@@ -27,13 +26,13 @@ const VISION_ENDPOINT = 'https://vision.googleapis.com/v1/images:annotate';
 const ENV = {
   GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY,
   SERP_API_KEY: process.env.SERP_API_KEY,
-  PRICE_COUNTRY: process.env.PRICE_COUNTRY || 'IT',  // fallback paese
+  PRICE_COUNTRY: process.env.PRICE_COUNTRY || 'IT',
   PRICE_CURRENCY: process.env.PRICE_CURRENCY || 'EUR',
   MAX_RESULTS_PER_SITE: parseInt(process.env.MAX_RESULTS_PER_SITE || '25', 10),
   MARKETPLACES_CONFIG_PATH: process.env.MARKETPLACES_CONFIG_PATH || './marketplaces_config.json',
 };
 
-// ============ CONFIG MARKETPLACES (paesi/continenti, whitelist/blacklist) ============
+// ============ CONFIG MARKETPLACES ============
 let MP = { countries: {}, continents: {}, blacklist_domains: [] };
 try {
   const raw = fs.readFileSync(ENV.MARKETPLACES_CONFIG_PATH, 'utf-8');
@@ -54,11 +53,11 @@ try {
       }
     },
     continents: {},
-    blacklist_domains: ['pinterest.*','www.youtube.com','twitter.com','x.com','www.reddit.com','www.wikipedia.org']
+    blacklist_domains: ['pinterest.*','www.youtube.com','m.youtube.com','twitter.com','x.com','www.reddit.com','www.wikipedia.org']
   };
 }
 
-// ============ UTILS DI BASE ============
+// ============ UTILS ============
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const norm = s => (s || '')
   .normalize('NFKD')
@@ -66,24 +65,28 @@ const norm = s => (s || '')
   .replace(/\s+/g, ' ')
   .trim()
   .toLowerCase();
+const containsWord = (hay, needle) => {
+  if (!hay || !needle) return false;
+  const H = ` ${norm(hay)} `;
+  const N = ` ${norm(needle)} `;
+  return H.includes(N);
+};
 const uniq = arr => {
   const out = []; const seen = new Set();
   for (const x of arr) { const k = norm(x); if (!k || seen.has(k)) continue; seen.add(k); out.push(x.trim()); }
   return out;
 };
-
 function domainOf(urlStr) {
   try {
     const u = new URL(urlStr);
     return u.hostname.replace(/^www\./,'');
   } catch {
-    // fallback grezzo
     const m = (urlStr || '').match(/https?:\/\/([^\/]+)/i);
     return m ? m[1].replace(/^www\./,'') : '';
   }
 }
 
-// ============ LEXICON / NORMALIZATION (pattern, gender, stopwords) ============
+// ============ LEXICON / NORMALIZATION ============
 const STOPWORDS = new Set([
   'textile','fabric','clothing','apparel','garment','sleeve','long','short','active','sports','sport','athletic',
   'men','man','male','woman','women','female','kids','boy','girl','youth','child','children','unisex',
@@ -91,7 +94,6 @@ const STOPWORDS = new Set([
   'polyester','cotton','nylon','spandex','elastane','elastic','blend','material','composition','label','brand','logo','pattern',
   'maglia','maglietta','tessuto','abbigliamento','manica','uomo','donna','bambino','bambina','bimbo','bimba','adulto','ragazzo','ragazza'
 ]);
-
 const CATEGORY_SYNONYMS = {
   't-shirt': ['t-shirt','tshirt','tee','maglietta'],
   'felpa': ['felpa','hoodie','sweatshirt'],
@@ -102,7 +104,6 @@ const CATEGORY_SYNONYMS = {
   'gonna': ['gonna','skirt'],
   'vestito': ['vestito','dress'],
 };
-
 const PATTERN_SYNONYMS = {
   'righe': ['righe','rigato','a righe','striped','stripes','pinstripe'],
   'quadri': ['quadri','a quadri','checked','check','plaid','tartan','gingham','houndstooth'],
@@ -119,14 +120,12 @@ const PATTERN_SYNONYMS = {
   'texture': ['texture','waffle','ribbed','a costine','costine','knit','cable knit','piqué','pique','mesh'],
   'logo': ['logo','monogram','brand allover','logato'],
 };
-
 const GENDER_MAP = {
   uomo: ['uomo','men','man','male','maschile'],
   donna: ['donna','women','woman','female','femminile'],
   unisex: ['unisex','uni'],
   kids: ['bambino','bambina','bimbo','bimba','kid','kids','child','children','youth','boy','girl'],
 };
-
 const BASIC_COLORS = {
   nero:[0,0,0], bianco:[255,255,255], grigio:[128,128,128], rosso:[200,30,30], arancione:[255,140,0],
   giallo:[255,215,0], verde:[30,160,60], blu:[40,80,200], azzurro:[80,180,255], viola:[140,70,170],
@@ -189,7 +188,7 @@ const colorFromVision = colors => {
   return nearestBasicColorName([r,g,b]);
 };
 
-// ============ QUERY BUILDER ============
+// ============ QUERY BUILDER (precedenza: marca form > marca+modello > marca+logo > logo) ============
 function buildCandidateQueries(form, vision) {
   const formBrand  = form.brand ? norm(form.brand) : '';
   const formModel  = form.model ? norm(form.model) : '';
@@ -210,23 +209,42 @@ function buildCandidateQueries(form, vision) {
   const catToken = formCat[0] || '';
   const patToken = formPat[0] || '';
   const J = (...parts) => norm(parts.filter(Boolean).join(' '));
+
   const Q = [];
 
-  if (formBrand || formModel) {
-    Q.push(J(formBrand, formModel, patToken, colorToken, formGender, catToken));
-    Q.push(J(formBrand, formModel, colorToken, catToken));
-    Q.push(J(formBrand, formModel, catToken));
-    if (formBrand) Q.push(J(formBrand, colorToken, catToken));
+  // 1) marca form (forte)
+  if (formBrand) {
+    // 2) marca + modello
+    if (formModel) {
+      Q.push(J(formBrand, formModel, patToken, colorToken, formGender, catToken));
+      Q.push(J(formBrand, formModel, colorToken, catToken));
+      Q.push(J(formBrand, formModel, catToken));
+    }
+    // 3) marca form + logo vision (se diverso, come arricchimento)
+    if (logoBrand && logoBrand !== formBrand) {
+      Q.push(J(formBrand, logoBrand, colorToken, catToken));
+    }
+    // marca secca + contesti
+    Q.push(J(formBrand, patToken, colorToken, formGender, catToken));
+    Q.push(J(formBrand, colorToken, catToken));
+    Q.push(J(formBrand, catToken));
   }
-  if (logoBrand) {
+
+  // 4) solo logo vision (se non c'è marca form)
+  if (!formBrand && logoBrand) {
     Q.push(J(logoBrand, ocrTokens.slice(0,2).join(' '), colorToken, formGender, catToken));
     Q.push(J(logoBrand, colorToken, catToken));
     Q.push(J(logoBrand, catToken));
   }
+
+  // OCR/labels come supporto
   if (ocrTokens.length) Q.push(J(ocrTokens.slice(0,3).join(' '), colorToken, formGender, catToken));
   if (strongLbls.length) Q.push(J(strongLbls.slice(0,3).join(' '), colorToken, formGender, catToken));
+
   if (!Q.length) Q.push('t-shirt');
-  return uniq(Q).filter(q => q.split(' ').length >= 1);
+  const queries = uniq(Q).filter(q => q.split(' ').length >= 1);
+  const brandResolved = formBrand || logoBrand || '';
+  return { queries, brandResolved };
 }
 
 // ============ SERP HELPERS ============
@@ -260,11 +278,8 @@ async function serpShoppingGlobal({ query, num, hl='it', gl='it' }) {
   const { data } = await axios.get(url, { timeout: 15000 });
   return (data.shopping_results || []).map(s => ({
     title: s.title, link: s.link,
-    snippet: [
-      s.source,
-      s.condition ? `Cond: ${s.condition}` : '',
-      s.shipping ? `Sped: ${s.shipping}` : ''
-    ].filter(Boolean).join(' · '),
+    snippet: [s.source, s.condition ? `Cond: ${s.condition}` : '', s.shipping ? `Sped: ${s.shipping}` : '']
+      .filter(Boolean).join(' · '),
     price_str: s.price || (s.extracted_price ? `€${s.extracted_price}` : '')
   }));
 }
@@ -305,12 +320,16 @@ const humanRound = x => {
   if (x < 500) return Math.round(x / 25) * 25;
   return Math.round(x / 50) * 50;
 };
+
 function scoreItem(it, ctx) {
   const title = norm(`${it.title || ''} ${it.snippet || ''}`);
   let s = 0;
-  if (ctx.brand && title.includes(norm(ctx.brand))) s += 26;
-  if (ctx.model && title.includes(norm(ctx.model))) s += 20;
-  if (ctx.color && title.includes(norm(ctx.color))) s += 6;
+
+  // Boost forti su brand/modello
+  if (ctx.brand && containsWord(title, ctx.brand)) s += 40;
+  if (ctx.model && containsWord(title, ctx.model)) s += 28;
+
+  if (ctx.color && containsWord(title, ctx.color)) s += 6;
 
   if (ctx.gender) {
     const G = {
@@ -322,38 +341,30 @@ function scoreItem(it, ctx) {
     if (ctx.gender === 'uomo' && (G.uomo || G.unisex)) s += 6;
     if (ctx.gender === 'donna' && (G.donna || G.unisex)) s += 6;
     if (ctx.gender === 'kids' && G.kids) s += 6;
-    if (ctx.gender === 'uomo' && G.donna) s -= 8;
-    if (ctx.gender === 'donna' && G.uomo) s -= 8;
+    if (ctx.gender === 'uomo' && G.donna) s -= 10;
+    if (ctx.gender === 'donna' && G.uomo) s -= 10;
     if (ctx.gender !== 'kids' && G.kids) s -= 6;
   }
-  if (ctx.category && title.includes(norm(ctx.category))) s += 3;
-  // micro-boost se il dominio è locale/whitelist con peso alto
+  if (ctx.category && containsWord(title, ctx.category)) s += 4;
+
+  // Penalità: se nel form c'è brand, penalizza altri brand noti
+  if (ctx.brand) {
+    const notThisBrand = ['nike','adidas','puma','reebok','new balance','under armour','levi','h&m','zara','gucci','prada','armani','dolce',
+      'diesel','fila','kappa','the north face','north face','patagonia','ralph lauren','lacoste','superdry','harley davidson']
+      .filter(b => b !== norm(ctx.brand));
+    if (notThisBrand.some(b => containsWord(title, b))) s -= 25;
+  }
+
+  // Boost sito locale
   const d = domainOf(it.link);
   const w = ctx.siteWeights[d] || 0;
   s += Math.min(8, Math.round(w * 6));
+
   return Math.max(0, Math.min(100, s));
 }
 
-// ============ CONDITION HEURISTIC ============
-function applyConditionHeuristic(prices, items, condition) {
-  if (condition === 'new' || condition === 'used') {
-    const { filtered } = robustStats(prices);
-    return { baseMedian: robustStats(filtered).median, mode: condition, newRatio: null };
-  }
-  const upperText = items.map(i => `${i.title} ${i.snippet || ''}`.toUpperCase());
-  const newRatio = upperText.filter(t => NEW_HINT.test(t)).length / Math.max(1, upperText.length);
-  const { filtered } = robustStats(prices);
-  let baseMedian = robustStats(filtered).median;
-  if (baseMedian != null && newRatio < 0.15) {
-    const trimmed = filtered.filter(v => v <= baseMedian * 1.35);
-    baseMedian = robustStats(trimmed).median || baseMedian;
-  }
-  return { baseMedian, mode: 'auto', newRatio };
-}
-
-// ============ CONTEXT: quale paese/continente usare ============
+// ============ CONTEXT ============
 function getSearchContext({ country, continent }) {
-  // 1) country esplicito
   if (country && MP.countries[country]) {
     const { hl, gl, sites } = MP.countries[country];
     const sorted = [...sites].sort((a,b)=> (b.weight||0)-(a.weight||0));
@@ -361,9 +372,7 @@ function getSearchContext({ country, continent }) {
     const siteWeights = Object.fromEntries(sorted.map(s => [s.domain.replace(/^www\./,''), s.weight||0]));
     return { hl, gl, siteList, siteWeights };
   }
-  // 2) continent
   if (continent && MP.continents[continent]) {
-    // prendi i top N per peso aggregato
     const byDomain = {};
     for (const n of MP.continents[continent]) {
       const key = n.domain.replace(/^www\./,'');
@@ -373,11 +382,9 @@ function getSearchContext({ country, continent }) {
     const sorted = Object.entries(byDomain).sort((a,b)=> b[1]-a[1]).slice(0, 8);
     const siteList = sorted.map(([d]) => d);
     const siteWeights = Object.fromEntries(sorted);
-    // lingua/geo fallback: usa ENV.PRICE_COUNTRY
     const fallback = MP.countries[ENV.PRICE_COUNTRY] || { hl:'en', gl:'us' };
     return { hl: fallback.hl, gl: fallback.gl, siteList, siteWeights };
   }
-  // 3) fallback al paese di default
   const fb = MP.countries[ENV.PRICE_COUNTRY] || { hl:'en', gl:'us', sites: [] };
   const sorted = (fb.sites||[]).sort((a,b)=> (b.weight||0)-(a.weight||0));
   const siteList = sorted.map(s => s.domain);
@@ -387,7 +394,6 @@ function getSearchContext({ country, continent }) {
 const isBlacklisted = (host) => {
   const h = (host||'').toLowerCase();
   return MP.blacklist_domains.some(b => {
-    // wildcard very simple: 'pinterest.*'
     if (b.endsWith('.*')) {
       const base = b.slice(0, -2);
       return h === base || h.endsWith('.'+base) || h.includes(base);
@@ -396,7 +402,19 @@ const isBlacklisted = (host) => {
   });
 };
 
-// ============ ROUTE PRINCIPALE ============
+// ============ ROUTES ============
+app.get('/', (_, res) => {
+  res.type('html').send(`
+    <h1>HOWMANYBUCKS – Backend</h1>
+    <ul>
+      <li><a href="/health">/health</a></li>
+      <li>POST /search/image – JSON con <code>imageBase64</code> (+ campi form)</li>
+    </ul>
+  `);
+});
+
+app.get('/health', (_, res) => res.send('OK'));
+
 app.post('/search/image', async (req, res) => {
   try {
     const {
@@ -407,8 +425,10 @@ app.post('/search/image', async (req, res) => {
       brand = '', model = '', category = 't-shirt', pattern = '',
       gender = '', color = '',
       // Scope geografico
-      country = '',              // es. "IT", "FR", "US"
-      continent = ''             // es. "Europe", "North America"
+      country = '',
+      continent = '',
+      // K (facoltativo)
+      kFactor = null
     } = req.body || {};
 
     if (!imageBase64) {
@@ -418,16 +438,15 @@ app.post('/search/image', async (req, res) => {
     // 0) contesto paesi/siti
     const ctxGeo = getSearchContext({ country, continent });
     const { hl, gl, siteList, siteWeights } = ctxGeo;
-    const TOP_SITES = Math.min(siteList.length, 6);  // limitiamo per performance
+    const TOP_SITES = Math.min(siteList.length, 6);
 
     // 1) Vision
     const vision = await googleVisionAnnotate(imageBase64);
 
-    // 2) Query candidates
-    const queries = buildCandidateQueries(
-      { brand, model, category, pattern, gender, color },
-      vision
-    );
+    // 2) Query candidates + brandResolved
+    const qb = buildCandidateQueries({ brand, model, category, pattern, gender, color }, vision);
+    const queries = qb.queries;
+    const brandResolved = qb.brandResolved;
 
     let merged = [];
     let usedQuery = null;
@@ -445,7 +464,6 @@ app.post('/search/image', async (req, res) => {
       if (includeShopping) {
         try {
           const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
-          // filtriamo shopping per blacklist
           const shopFiltered = shop.filter(it => !isBlacklisted(domainOf(it.link)));
           step.push(...shopFiltered);
         } catch {}
@@ -456,7 +474,6 @@ app.post('/search/image', async (req, res) => {
     }
 
     if (!merged.length) {
-      // fallback: usa la prima query e i siti principali
       const q = queries[0];
       let fb = [];
       for (const site of siteList.slice(0, TOP_SITES)) {
@@ -472,34 +489,48 @@ app.post('/search/image', async (req, res) => {
       usedQuery = q;
     }
 
-    // 4) Filtra risultati non-whitelist (per sicurezza) e applica blacklist
+    // 4) Filtra non-whitelist e blacklist
     const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
     const filteredWL = merged.filter(it => {
       const d = domainOf(it.link);
       if (!d) return false;
       if (isBlacklisted(d)) return false;
-      return whiteSet.has(d.replace(/^www\./,'')) || includeShopping; // shopping può avere domini vari, già filtrati
+      return whiteSet.has(d.replace(/^www\./,'')) || includeShopping;
     });
 
-    // 5) Re-ranking per punteggio + pesi sito locali
+    // 4b) Hard filter sul brand se specificato (con fallback se troppo stretto)
+    let filteredStrict = filteredWL;
+    if (brand) {
+      filteredStrict = filteredWL.filter(it => {
+        const t = `${it.title||''} ${it.snippet||''}`;
+        return containsWord(t, brand);
+      });
+      if (filteredStrict.length < 6) filteredStrict = filteredWL;
+    }
+
+    // 5) Re-ranking
     const contextScore = {
       brand, model, gender, color: color || colorFromVision(vision.colors) || '', category,
       siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
     };
-    const ranked = [...filteredWL].map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
-                                  .sort((a,b) => b._score - a._score);
+    const ranked = [...filteredStrict].map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
+                                      .sort((a,b) => b._score - a._score);
 
-    // 6) Prezzi dai top N
+    // 6) Prezzi
     const TOP_N = 40;
     const topForPricing = ranked.slice(0, TOP_N);
     const prices = topForPricing.map(it => parseMoney(it.price_str || it.title || it.snippet)).filter(Number.isFinite);
-
     const { baseMedian, mode, newRatio } = applyConditionHeuristic(prices, topForPricing, condition);
     const suggested = humanRound(baseMedian);
+
+    // kFactor
+    const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
+    const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
 
     res.json({
       success: true,
       geo: { hl, gl, countryUsed: country || ENV.PRICE_COUNTRY, continentUsed: continent || null, sitesQueried: siteList.slice(0, TOP_SITES) },
+      brandResolved,
       queryUsed: usedQuery,
       queriesTried: queries.slice(0, 8),
       visionPreview: {
@@ -508,16 +539,19 @@ app.post('/search/image', async (req, res) => {
         textHint: vision.text?.slice(0, 120) || null,
         colorGuess: colorFromVision(vision.colors) || null
       },
-      params: { includeShopping: !!includeShopping, condition: mode, form: { brand, model, category, pattern, gender, color: contextScore.color } },
+      params: { includeShopping: !!includeShopping, condition: mode, form: { brand, model, category, pattern, gender, color: contextScore.color }, kFactor: kVal },
+      note: (!brand && !model) ? 'Per un’analisi più puntuale, indica marca e/o modello nel form.' : null,
       stats: {
         resultsFound: merged.length,
         afterWhitelist: filteredWL.length,
-        rankedTopUsed: Math.min(filteredWL.length, TOP_N),
+        afterBrandFilter: filteredStrict.length,
+        rankedTopUsed: Math.min(filteredStrict.length, TOP_N),
         pricedCount: prices.length,
         baseMedian,
         newMentionRatio: newRatio
       },
       suggestedPrice: suggested,
+      suggestedPriceAdjusted,
       currency: ENV.PRICE_CURRENCY,
       examples: ranked.slice(0, 18)
     });
@@ -526,8 +560,6 @@ app.post('/search/image', async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
-app.get('/health', (_, res) => res.send('OK'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API avviata su :${PORT}`));
