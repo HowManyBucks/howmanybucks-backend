@@ -557,4 +557,20 @@ app.post('/search/image', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+app.get('/test-ebay', async (req, res) => {
+  try {
+    const query = "nike";
+
+    const url = `https://svcs.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findCompletedItems&SERVICE-VERSION=1.13.0&SECURITY-APPNAME=${process.env.EBAY_APP_ID}&RESPONSE-DATA-FORMAT=JSON&REST-PAYLOAD&keywords=${query}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    res.json(data);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Errore eBay");
+  }
+});
 app.listen(PORT, () => console.log(`API avviata su :${PORT}`));
