@@ -587,8 +587,15 @@ app.get('/test-ebay', async (req, res) => {
     });
 
     const data = await response.json();
+    const items = (data.itemSummaries || []).map(item => ({
+      title: item.title,
+      price: item.price?.value,
+      currency: item.price?.currency,
+      condition: item.condition,
+      url: item.itemWebUrl
+}));
 
-    res.json(data);
+res.json(items);
 
   } catch (error) {
     console.error(error);
