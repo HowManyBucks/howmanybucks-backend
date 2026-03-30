@@ -561,9 +561,15 @@ app.get('/test-ebay', async (req, res) => {
   try {
     const query = "nike";
 
-    const url = `https://svcs.ebay.com/services/search/FindingService/v1?OPERATION-NAME=findItemsAdvanced&SERVICE-VERSION=1.13.0&SECURITY-APPNAME=${process.env.EBAY_APP_ID}&RESPONSE-DATA-FORMAT=JSON&REST-PAYLOAD&keywords=${query}&itemFilter(0).name=ListingType&itemFilter(0).value=FixedPrice&itemFilter(1).name=Condition&itemFilter(1).value=3000&itemFilter(2).name=HideDuplicateItems&itemFilter(2).value=true`;
+    const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${query}`;
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${process.env.EBAY_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    });
+
     const data = await response.json();
 
     res.json(data);
