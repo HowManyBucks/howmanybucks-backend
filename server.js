@@ -594,8 +594,7 @@ app.get('/test-ebay', async (req, res) => {
       condition: item.condition,
       url: item.itemWebUrl
 }));
-
-res.json(items);
+res.send(`<pre>${JSON.stringify(items.slice(0, 10), null, 2)}</pre>`);
 
   } catch (error) {
     console.error(error);
