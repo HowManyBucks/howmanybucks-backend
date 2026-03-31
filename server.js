@@ -5,6 +5,12 @@ import fs from 'fs';
 
 const app = express();
 
+const APPAREL_EXCLUDED_TERMS = [
+  'case', 'cover', 'phone', 'charger', 'cable', 'lace', 'laces',
+  'sock', 'socks', 'hat', 'cap', 'belt', 'keychain', 'sticker',
+  'watch', 'strap', 'bag', 'wallet', 'perfume'
+];
+
 // CORS: localhost (qualsiasi porta) + dominio prod
 app.use(cors({
   origin: [
