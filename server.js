@@ -620,8 +620,11 @@ app.get('/test-ebay', async (req, res) => {
 
     const data = await response.json();
 
-    const items = (data.itemSummaries || [])
-      .filter(item => !isExcludedApparelResult(item.title))
+const category = req.query.category || "t-shirt";
+
+const items = (data.itemSummaries || [])
+  .filter(item => !isExcludedApparelResult(item.title))
+  .filter(item => matchesApparelCategory(item.title, category))
       .map(item => ({
         title: item.title,
         price: item.price?.value,
