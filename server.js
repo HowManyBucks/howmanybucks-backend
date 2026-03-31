@@ -10,6 +10,10 @@ const APPAREL_EXCLUDED_TERMS = [
   'sock', 'socks', 'hat', 'cap', 'belt', 'keychain', 'sticker',
   'watch', 'strap', 'bag', 'wallet', 'perfume'
 ];
+function isExcludedApparelResult(text = '') {
+  const t = String(text).toLowerCase();
+  return APPAREL_EXCLUDED_TERMS.some(term => t.includes(term));
+}
 
 // CORS: localhost (qualsiasi porta) + dominio prod
 app.use(cors({
@@ -593,12 +597,15 @@ app.get('/test-ebay', async (req, res) => {
     });
 
     const data = await response.json();
-    const items = (data.itemSummaries || []).map(item => ({
-      title: item.title,
-      price: item.price?.value,
-      currency: item.price?.currency,
-      condition: item.condition,
-      url: item.itemWebUrl
+    const items = (data.itemSummaries || [])
+  .filter(item => !isExcludedApparelResult(item.title))
+  .map(item => ({
+    title: item.title,
+    price: item.price?.value,
+    currency: item.price?.currency,
+    condition: item.condition,
+    url: item.itemWebUrl
+  }));
 }));
 res.send(`<pre>${JSON.stringify(items.slice(0, 10), null, 2)}</pre>`);
 
