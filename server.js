@@ -620,8 +620,6 @@ app.get('/test-ebay', async (req, res) => {
 
     const data = await response.json();
 
-const query = req.query.q || "nike t shirt black";
-
 let category = "t-shirt";
 
 if (query.toLowerCase().includes("hoodie")) category = "hoodie";
