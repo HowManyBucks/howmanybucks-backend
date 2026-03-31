@@ -586,29 +586,30 @@ app.get('/test-ebay', async (req, res) => {
   try {
     const query = req.query.q || "nike t shirt black";
 
+    const token = await getEbayToken();
+
     const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${query}`;
 
-    const token = await getEbayToken();
     const response = await fetch(url, {
-      headers: {  
+      headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
       }
     });
 
     const data = await response.json();
-    const items = (data.itemSummaries || [])
-  .filter(item => !isExcludedApparelResult(item.title))
-  .map(item => ({
-    title: item.title,
-    price: item.price?.value,
-    currency: item.price?.currency,
-    condition: item.condition,
-    url: item.itemWebUrl
-  }));
-}));
-res.send(`<pre>${JSON.stringify(items.slice(0, 10), null, 2)}</pre>`);
 
+    const items = (data.itemSummaries || [])
+      .filter(item => !isExcludedApparelResult(item.title))
+      .map(item => ({
+        title: item.title,
+        price: item.price?.value,
+        currency: item.price?.currency,
+        condition: item.condition,
+        url: item.itemWebUrl
+      }));
+
+    res.send(`<pre>${JSON.stringify(items.slice(0, 10), null, 2)}</pre>`);
   } catch (error) {
     console.error(error);
     res.status(500).send("Errore eBay");
