@@ -574,7 +574,7 @@ async function getEbayToken() {
 }
 app.get('/test-ebay', async (req, res) => {
   try {
-    const query = "macbook air m1 usato";
+    const query = req.query.q || "macbook air m1 usato";
 
     const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${query}`;
 
