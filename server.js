@@ -14,6 +14,27 @@ function isExcludedApparelResult(text = '') {
   const t = String(text).toLowerCase();
   return APPAREL_EXCLUDED_TERMS.some(term => t.includes(term));
 }
+function matchesApparelCategory(text = '', category = '') {
+  const t = String(text).toLowerCase();
+  const c = String(category).toLowerCase();
+
+  if (!c) return true;
+
+  const map = {
+    't-shirt': ['t-shirt', 'tee', 'shirt', 'short sleeve'],
+    'hoodie': ['hoodie', 'sweatshirt'],
+    'jacket': ['jacket', 'coat', 'blazer'],
+    'jeans': ['jeans', 'denim'],
+    'shirt': ['shirt', 'button down', 'button-up'],
+    'dress': ['dress', 'gown'],
+    'skirt': ['skirt'],
+    'sweater': ['sweater', 'knit', 'pullover'],
+    'polo': ['polo'],
+  };
+
+  const keywords = map[c] || [c];
+  return keywords.some(k => t.includes(k));
+}
 
 // CORS: localhost (qualsiasi porta) + dominio prod
 app.use(cors({
