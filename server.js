@@ -14,7 +14,7 @@ function isExcludedApparelResult(text = '') {
   const t = String(text).toLowerCase();
   return APPAREL_EXCLUDED_TERMS.some(term => t.includes(term));
 }
-function matchesApparelCategory(text = '', category = '') {
+function matchesApparelCategory(text = '', finalCategory = '') {
   const t = String(text).toLowerCase();
   const c = String(category).toLowerCase();
 
@@ -454,7 +454,7 @@ app.post('/search/image', async (req, res) => {
       imageBase64,
       includeShopping = false,
       condition = 'auto',
-      brand = '', model = '', category = 't-shirt', pattern = '',
+      brand = '', model = '', category = '', pattern = '',
       gender = '', color = '',
       country = '', continent = '',
       kFactor = null,
@@ -464,7 +464,34 @@ app.post('/search/image', async (req, res) => {
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
+    // === GOOGLE VISION (LABEL DETECTION) ===
+const visionRes = await fetch(`${VISION_ENDPOINT}?key=${ENV.GOOGLE_VISION_API_KEY}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    requests: [
+      {
+        image: { content: imageBase64 },
+        features: [{ type: "LABEL_DETECTION", maxResults: 10 }]
+      }
+    ]
+  })
+});
+    // === DEDUZIONE CATEGORIA ===
+let detectedCategory = '';
 
+if (labels.some(l => l.includes('t-shirt') || l.includes('shirt'))) detectedCategory = 't-shirt';
+if (labels.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) detectedCategory = 'hoodie';
+if (labels.some(l => l.includes('jacket') || l.includes('coat'))) detectedCategory = 'jacket';
+if (labels.some(l => l.includes('jeans') || l.includes('denim'))) detectedCategory = 'jeans';
+
+const finalCategory = category || detectedCategory || 't-shirt';
+
+console.log("FINAL CATEGORY:", finalCategory);
+const visionData = await visionRes.json();
+const labels = visionData.responses?.[0]?.labelAnnotations?.map(l => l.description.toLowerCase()) || [];
+
+console.log("VISION LABELS:", labels);
     // Geo
     const ctxGeo = getSearchContext({ country, continent });
     const { hl, gl, siteList, siteWeights } = ctxGeo;
