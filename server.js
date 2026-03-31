@@ -574,7 +574,7 @@ async function getEbayToken() {
 }
 app.get('/test-ebay', async (req, res) => {
   try {
-    const query = "nike";
+    const query = "iphone 15 pro";
 
     const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${query}`;
 
