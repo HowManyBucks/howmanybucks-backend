@@ -620,7 +620,14 @@ app.get('/test-ebay', async (req, res) => {
 
     const data = await response.json();
 
-const category = req.query.category || "t-shirt";
+const query = req.query.q || "nike t shirt black";
+
+let category = "t-shirt";
+
+if (query.toLowerCase().includes("hoodie")) category = "hoodie";
+if (query.toLowerCase().includes("jacket")) category = "jacket";
+if (query.toLowerCase().includes("jeans")) category = "jeans";
+if (query.toLowerCase().includes("polo")) category = "polo";
 
 const items = (data.itemSummaries || [])
   .filter(item => !isExcludedApparelResult(item.title))
