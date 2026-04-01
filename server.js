@@ -488,10 +488,30 @@ if (labels.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) detected
 if (labels.some(l => l.includes('jacket') || l.includes('coat'))) detectedCategory = 'jacket';
 if (labels.some(l => l.includes('jeans') || l.includes('denim'))) detectedCategory = 'jeans';
 
-const finalCategory = category || detectedCategory || 't-shirt';
+const formCategory = (category || '').toLowerCase().trim();
+const photoCategory = (detectedCategory || '').toLowerCase().trim();
+
+let finalCategory = formCategory || photoCategory || 't-shirt';
+let categoryValidation = 'no-photo-signal';
+
+if (formCategory && photoCategory) {
+  if (formCategory === photoCategory) {
+    finalCategory = formCategory;
+    categoryValidation = 'match';
+  } else {
+    finalCategory = photoCategory;
+    categoryValidation = 'photo-overrides-form';
+  }
+} else if (formCategory) {
+  finalCategory = formCategory;
+  categoryValidation = 'form-only';
+} else if (photoCategory) {
+  finalCategory = photoCategory;
+  categoryValidation = 'photo-only';
+}
 
 console.log("FINAL CATEGORY:", finalCategory);
-
+console.log("CATEGORY VALIDATION:", categoryValidation);
 console.log("VISION LABELS:", labels);
     // Geo
     const ctxGeo = getSearchContext({ country, continent });
