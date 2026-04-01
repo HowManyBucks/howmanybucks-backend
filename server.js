@@ -515,9 +515,6 @@ console.log("VISION LABELS:", labels);
     const { hl, gl, siteList, siteWeights } = ctxGeo;
     const TOP_SITES = Math.min(siteList.length, 6);
 
-    // Vision
-    const vision = await googleVisionAnnotate(imageBase64);
-
     // Query
     const qb = buildCandidateQueries({ brand, model, category, pattern, gender, color }, vision);
     const queries = qb.queries;
