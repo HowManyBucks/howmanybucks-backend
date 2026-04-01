@@ -188,6 +188,7 @@ const nearestBasicColorName = rgb => {
 
 // ===== VISION =====
 async function googleVisionAnnotate(imageBase64) {
+  console.log("VISION_FN_HIT");
   const body = {
     requests: [{
       image: { content: imageBase64 },
@@ -453,6 +454,7 @@ app.get('/health', (_, res) => res.send('OK'));
 
 app.post('/search/image', async (req, res) => {
   try {
+    console.log("SEARCH_IMAGE_HIT");
     const {
       imageBase64,
       includeShopping = false,
