@@ -477,6 +477,9 @@ const visionRes = await fetch(`${VISION_ENDPOINT}?key=${ENV.GOOGLE_VISION_API_KE
     ]
   })
 });
+const visionData = await visionRes.json();
+const labels = visionData.responses?.[0]?.labelAnnotations?.map(l => l.description.toLowerCase()) || [];
+
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
 
@@ -488,8 +491,6 @@ if (labels.some(l => l.includes('jeans') || l.includes('denim'))) detectedCatego
 const finalCategory = category || detectedCategory || 't-shirt';
 
 console.log("FINAL CATEGORY:", finalCategory);
-const visionData = await visionRes.json();
-const labels = visionData.responses?.[0]?.labelAnnotations?.map(l => l.description.toLowerCase()) || [];
 
 console.log("VISION LABELS:", labels);
     // Geo
