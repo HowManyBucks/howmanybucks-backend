@@ -204,6 +204,9 @@ async function googleVisionAnnotate(imageBase64) {
     body,
     { timeout: 12000 }
   );
+
+  console.log("VISION RAW:", JSON.stringify(data).slice(0, 800));
+  
   const r = data.responses?.[0] || {};
   const colors = r.imagePropertiesAnnotation?.dominantColors?.colors || [];
   return {
