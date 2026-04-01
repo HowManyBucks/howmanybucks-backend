@@ -472,22 +472,28 @@ const visionRes = await fetch(`${VISION_ENDPOINT}?key=${ENV.GOOGLE_VISION_API_KE
     requests: [
       {
         image: { content: imageBase64 },
-        features: [{ type: "LABEL_DETECTION", maxResults: 10 }]
+        features: [
+          { type: 'LABEL_DETECTION', maxResults: 10 },
+          { type: 'WEB_DETECTION', maxResults: 10 }
+        ]
       }
     ]
   })
 });
 const visionData = await visionRes.json();
 const labels = visionData.responses?.[0]?.labelAnnotations?.map(l => l.description.toLowerCase()) || [];
+const webEntities = visionData.responses?.[0]?.webDetection?.webEntities?.map(e => (e.description || '').toLowerCase()).filter(Boolean) || [];
+const visionSignals = [...labels, ...webEntities];
+console.log("VISION SIGNALS:", visionSignals);
 
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
 
-if (labels.some(l => l.includes('t-shirt') || l.includes('shirt'))) detectedCategory = 't-shirt';
-if (labels.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) detectedCategory = 'hoodie';
-if (labels.some(l => l.includes('jacket') || l.includes('coat'))) detectedCategory = 'jacket';
-if (labels.some(l => l.includes('jeans') || l.includes('denim'))) detectedCategory = 'jeans';
-
+if (visionSignals.some(l => l.includes('t-shirt') || l.includes('shirt'))) detectedCategory = 't-shirt';
+if (visionSignals.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) detectedCategory = 'hoodie';
+if (visionSignals.some(l => l.includes('jacket') || l.includes('coat'))) detectedCategory = 'jacket';
+if (visionSignals.some(l => l.includes('jeans') || l.includes('denim'))) detectedCategory = 'jeans';
+    
 const formCategory = (category || '').toLowerCase().trim();
 const photoCategory = (detectedCategory || '').toLowerCase().trim();
 
