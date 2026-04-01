@@ -192,10 +192,10 @@ async function googleVisionAnnotate(imageBase64) {
     requests: [{
       image: { content: imageBase64 },
       features: [
-        { type: 'LOGO_DETECTION',  maxResults: 3 },
-        { type: 'TEXT_DETECTION',  maxResults: 1 },
-        { type: 'LABEL_DETECTION', maxResults: 10 },
-        { type: 'IMAGE_PROPERTIES', maxResults: 1 }
+        { type: 'LOGO_DETECTION',  maxResults: 10 },
+        { type: 'TEXT_DETECTION',  maxResults: 10 },
+        { type: 'LABEL_DETECTION', maxResults: 5 },
+        { type: 'IMAGE_PROPERTIES', maxResults: 10 }
       ]
     }]
   };
@@ -464,28 +464,16 @@ app.post('/search/image', async (req, res) => {
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
-    // === GOOGLE VISION (LABEL DETECTION) ===
-const visionRes = await fetch(`${VISION_ENDPOINT}?key=${ENV.GOOGLE_VISION_API_KEY}`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    requests: [
-      {
-        image: { content: imageBase64 },
-        features: [
-          { type: 'LABEL_DETECTION', maxResults: 10 },
-          { type: 'WEB_DETECTION', maxResults: 10 }
-        ]
-      }
-    ]
-  })
-});
-const visionData = await visionRes.json();
-const labels = visionData.responses?.[0]?.labelAnnotations?.map(l => l.description.toLowerCase()) || [];
-const webEntities = visionData.responses?.[0]?.webDetection?.webEntities?.map(e => (e.description || '').toLowerCase()).filter(Boolean) || [];
-const visionSignals = [...labels, ...webEntities];
-console.log("VISION SIGNALS:", visionSignals);
+  const vision = await googleVisionAnnotate(imageBase64);
 
+  const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
+  const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
+  const text = (vision.text || '').toLowerCase();
+
+  const visionSignals = [...labels, ...logos];
+  if (text) visionSignals.push(text);
+
+console.log("VISION SIGNALS:", visionSignals);
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
 
