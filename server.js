@@ -465,7 +465,7 @@ app.post('/search/image', async (req, res) => {
       kFactor = null,
       strictBrand: strictBrandFromClient = null,
     } = req.body || {};
-
+console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
