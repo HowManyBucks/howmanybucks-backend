@@ -472,14 +472,14 @@ console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
   const vision = await googleVisionAnnotate(imageBase64);
-  const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());  
+  const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
   const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
   const text = (vision.text || '').toLowerCase();
 
   const visionSignals = [...labels, ...logos];
   if (text) visionSignals.push(text);
 
-console.log("VISION SIGNALS:", visionSignals.slice(0, 10));
+  console.log("VISION SIGNALS:", visionSignals.slice(0, 10));
   const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
   const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
   const text = (vision.text || '').toLowerCase();
