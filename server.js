@@ -480,14 +480,7 @@ console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
   if (text) visionSignals.push(text);
 
   console.log("VISION SIGNALS:", visionSignals.slice(0, 10));
-  const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
-  const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
-  const text = (vision.text || '').toLowerCase();
-
-  const visionSignals = [...labels, ...logos];
-  if (text) visionSignals.push(text);
-
-console.log("VISION SIGNALS:", visionSignals);
+ 
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
 
