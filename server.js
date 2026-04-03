@@ -16,7 +16,7 @@ function isExcludedApparelResult(text = '') {
 }
 function matchesApparelCategory(text = '', finalCategory = '') {
   const t = String(text).toLowerCase();
-  const c = String(category).toLowerCase();
+  const c = String(finalCategory).toLowerCase();
 
   if (!c) return true;
 
@@ -585,13 +585,27 @@ console.log("VISION LABELS:", labels);
       brand, model, gender, color: color || colorFromVision(vision.colors) || '', category,
       siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
     };
-    const ranked = [...filteredStrict].map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
-                                      .sort((a,b) => b._score - a._score);
+    const cleaned = filteredStrict.filter(it => {
+      const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
+      return !isExcludedApparelResult(text) && matchesApparelCategory(text, finalCategory);
+    });
+
+    const ranked = [...cleaned].map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
+      .sort((a,b) => b._score - a._score);
 
     // Prezzi
     const TOP_N = 40;
     const topForPricing = ranked.slice(0, TOP_N);
-    const prices = topForPricing.map(it => parseMoney(it.price_str || it.title || it.snippet)).filter(Number.isFinite);
+    const rawPrices = topForPricing
+      .map(it => parseMoney(it.price_str || it.title || it.snippet))
+      .filter(Number.isFinite);
+
+    // 📊 filtro dinamico: elimina outlier troppo bassi
+    const sorted = [...rawPrices].sort((a, b) => a - b);
+    const medianRaw = sorted[Math.floor(sorted.length / 2)] || 0;
+
+  // taglia solo prezzi "sospetti" (meno del 20% della mediana)
+    const prices = rawPrices.filter(p => p >= (medianRaw * 0.2));
     const { baseMedian, mode, newRatio } = applyConditionHeuristic(prices, topForPricing, condition);
     const suggested = humanRound(baseMedian);
 
