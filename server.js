@@ -490,7 +490,7 @@ const visionSignals = [
 ...visionTextTokens
 ];
 
-console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals, null, 2));
+console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals));
  
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
