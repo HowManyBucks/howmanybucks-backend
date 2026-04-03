@@ -622,7 +622,15 @@ console.log("VISION LABELS:", labels);
 
     const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
     const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
-
+    console.log("GEO_PRICE_LOG:", JSON.stringify({
+      timestamp: new Date().toISOString(),
+      country: country || ENV.PRICE_COUNTRY,
+      query: usedQuery,
+      brand: brandResolved,
+      category: finalCategory,
+      suggestedPrice: suggested,
+      suggestedAdjusted: suggestedPriceAdjusted
+    }));
     res.json({
       success: true,
       geo: { hl, gl, countryUsed: country || ENV.PRICE_COUNTRY, continentUsed: continent || null, sitesQueried: siteList.slice(0, TOP_SITES) },
