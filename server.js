@@ -471,15 +471,26 @@ console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
-  const vision = await googleVisionAnnotate(imageBase64);
-  const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
-  const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
-  const text = (vision.text || '').toLowerCase();
+const vision = await googleVisionAnnotate(imageBase64);
+const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
+const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
+const text = (vision.text || '').toLowerCase();
 
-  const visionSignals = [...labels, ...logos];
-  if (text) visionSignals.push(text);
+const visionTextTokens = text
+? text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+: [];
 
-  console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals, null, 2));
+const visionSignals = [
+...labels,
+...logos,
+...visionTextTokens
+];
+
+console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals, null, 2));
  
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
