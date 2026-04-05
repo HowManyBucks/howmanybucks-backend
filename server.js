@@ -610,7 +610,29 @@ try {
   ];
 
   merged = dedupeByLink(combined);
+// === FILTRO QUALITÀ BASE ===
 
+merged = merged.filter(item => {
+  const text = `${item.title || ''} ${item.snippet || ''}`.toLowerCase();
+
+  // 1) Escludi accessori
+  const excludeKeywords = [
+    'poster', 'sticker', 'patch', 'keychain', 'mug',
+    'cup', 'toy', 'lego', 'figure', 'decal'
+  ];
+  if (excludeKeywords.some(k => text.includes(k))) return false;
+
+  // 2) Deve contenere almeno un segnale clothing
+  const clothingKeywords = [
+    'shirt', 't-shirt', 'tee', 'hoodie', 'sweatshirt',
+    'jacket', 'coat', 'jeans', 'pants'
+  ];
+  const hasClothing = clothingKeywords.some(k => text.includes(k));
+  if (!hasClothing) return false;
+  return true;
+});
+
+console.log('AFTER QUALITY FILTER:', merged.length);
   console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
   console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
   console.log('MERGED RESULTS:', merged.length);
