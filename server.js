@@ -594,12 +594,17 @@ if (!merged.length) {
     // Whitelist + blacklist
     const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
     const filteredWL = merged.filter(it => {
-      const d = domainOf(it.link);
+    const d = domainOf(it.link);
       if (!d) return false;
       if (isBlacklisted(d)) return false;
-      return whiteSet.has(d.replace(/^www\./,'')) || includeShopping;
-    });
 
+      const dn = d.replace(/^www\./, '');
+
+    // accetta tutti i domini eBay quando la fonte è image-search eBay
+      const isAnyEbay = dn === 'ebay.it' || dn === 'ebay.com' || dn.endsWith('.ebay.com');
+
+      return whiteSet.has(dn) || includeShopping || isAnyEbay;
+    });
     /// Hard filter brand
     const strictBrand = strictBrandFromClient === null
       ? ENV.STRICT_BRAND_DEFAULT
