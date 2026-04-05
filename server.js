@@ -509,6 +509,10 @@ console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
+const tempImage = saveTempImageAndGetUrl(req, imageBase64);
+const tempImageUrl = tempImage.publicUrl;
+
+console.log('TEMP IMAGE URL:', tempImageUrl);
 const vision = await googleVisionAnnotate(imageBase64);
 const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
 const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
@@ -579,7 +583,7 @@ let usedQuery = 'ebay_image_search';
 
 try {
   const ebayImageItems = await ebaySearchByImage(imageBase64, { limit: 20 });
-  const googleLensItems = await searchWithGoogleLens(imageBase64);
+  const googleLensItems = await searchWithGoogleLens(tempImageUrl);
 
   const combined = [
     ...ebayImageItems,
@@ -795,32 +799,52 @@ async function ebaySearchByImage(imageBase64, { limit = 20 } = {}) {
   }));
   return items;
 }
-async function searchWithGoogleLens(imageBase64) {
+async function searchWithGoogleLens(imageUrl) {
   try {
-    const response = await fetch('https://serpapi.com/search.json', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        engine: 'google_lens',
-        api_key: process.env.SERP_API_KEY,
-        image_content: imageBase64
-      })
+    const params = new URLSearchParams({
+      engine: 'google_lens',
+      url: imageUrl,
+      api_key: process.env.SERP_API_KEY,
     });
+
+    const response = await fetch(`https://serpapi.com/search.json?${params.toString()}`, {
+      method: 'GET',
+    });
+
     const data = await response.json();
+
     const visualMatches = data.visual_matches || [];
-    const items = visualMatches.map(item => ({
-      title: item.title || '',
-      link: item.link || '',
-      snippet: item.source || '',
-      price_str: item.price || '',
-      source: 'google_lens',
-      image: item.thumbnail || ''
-    }));
+    const exactMatches = data.exact_matches || [];
+    const products = data.shopping_results || data.products || [];
 
-    return items;
+    const allItems = [
+      ...visualMatches.map(item => ({
+        title: item.title || '',
+        link: item.link || '',
+        snippet: item.source || '',
+        price_str: item.price || '',
+        source: 'google_lens_visual',
+        image: item.thumbnail || '',
+      })),
+      ...exactMatches.map(item => ({
+        title: item.title || '',
+        link: item.link || '',
+        snippet: item.source || '',
+        price_str: item.price || '',
+        source: 'google_lens_exact',
+        image: item.thumbnail || '',
+      })),
+      ...products.map(item => ({
+        title: item.title || '',
+        link: item.link || '',
+        snippet: item.source || '',
+        price_str: item.price || '',
+        source: 'google_lens_product',
+        image: item.thumbnail || '',
+      })),
+    ];
 
+    return allItems;
   } catch (e) {
     console.warn('GOOGLE LENS ERROR:', e.message);
     return [];
