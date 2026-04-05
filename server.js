@@ -530,45 +530,67 @@ console.log("VISION LABELS:", labels);
     const { hl, gl, siteList, siteWeights } = ctxGeo;
     const TOP_SITES = Math.min(siteList.length, 6);
 
-    // Query
-    const qb = buildCandidateQueries({ brand, model, category, pattern, gender, color }, vision);
-    const queries = qb.queries;
-    const brandResolved = qb.brandResolved;
+   // Query
+const qb = buildCandidateQueries({ brand, model, category, pattern, gender, color }, vision);
+const queries = qb.queries;
+const brandResolved = qb.brandResolved;
 
-    // Crawl SERP
-    let merged = [], usedQuery = null;
-    for (const q of queries) {
-      const step = [];
-      for (const site of siteList.slice(0, TOP_SITES)) {
-        try {
-          const r = await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl });
-          step.push(...r); await sleep(300);
-        } catch {}
-      }
-      if (includeShopping) {
-        try {
-          const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
-          step.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
-        } catch {}
-      }
-      const deduped = dedupeByLink(step);
-      const priced = deduped.filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
-      if (priced.length >= 6) { merged = deduped; usedQuery = q; break; }
-    }
-    if (!merged.length) {
-      const q = queries[0]; let fb = [];
-      for (const site of siteList.slice(0, TOP_SITES)) {
-        try { fb.push(...await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl })); } catch {}
-      }
-      if (includeShopping) {
-        try {
-          const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
-          fb.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
-        } catch {}
-      }
-      merged = dedupeByLink(fb); usedQuery = q;
-    }
+// 1) Prima prova vera image-search eBay
+let merged = [];
+let usedQuery = 'ebay_image_search';
 
+try {
+  const ebayImageItems = await ebaySearchByImage(imageBase64, { limit: 20 });
+  merged = dedupeByLink(ebayImageItems);
+  console.log('EBAY IMAGE SEARCH RESULTS:', merged.length);
+} catch (e) {
+  console.warn('EBAY IMAGE SEARCH FAILED:', e.message);
+}
+
+// 2) Se eBay non basta, fallback al vecchio sistema testuale
+if (!merged.length) {
+  for (const q of queries) {
+    const step = [];
+    for (const site of siteList.slice(0, TOP_SITES)) {
+      try {
+        const r = await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl });
+        step.push(...r);
+        await sleep(300);
+      } catch {}
+    }
+    if (includeShopping) {
+      try {
+        const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
+        step.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
+      } catch {}
+    }
+    const deduped = dedupeByLink(step);
+    const priced = deduped.filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
+    if (priced.length >= 6) {
+      merged = deduped;
+      usedQuery = q;
+      break;
+    }
+  }
+
+  if (!merged.length) {
+    const q = queries[0];
+    let fb = [];
+    for (const site of siteList.slice(0, TOP_SITES)) {
+      try {
+        fb.push(...await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl }));
+      } catch {}
+    }
+    if (includeShopping) {
+      try {
+        const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
+        fb.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
+      } catch {}
+    }
+    merged = dedupeByLink(fb);
+    usedQuery = q;
+  }
+}
     // Whitelist + blacklist
     const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
     const filteredWL = merged.filter(it => {
@@ -578,17 +600,21 @@ console.log("VISION LABELS:", labels);
       return whiteSet.has(d.replace(/^www\./,'')) || includeShopping;
     });
 
-    // Hard filter brand
+    /// Hard filter brand
     const strictBrand = strictBrandFromClient === null
       ? ENV.STRICT_BRAND_DEFAULT
       : !!strictBrandFromClient;
 
     let filteredStrict = filteredWL;
     if (brand) {
-      const onlyBrand = filteredWL.filter(it => containsWord(`${it.title||''} ${it.snippet||''}`, brand));
-      filteredStrict = strictBrand
-        ? onlyBrand                             // nessun fallback
-        : (onlyBrand.length >= 12 ? onlyBrand : filteredWL); // fallback morbido
+      const onlyBrand = filteredWL.filter(it => {
+      const hay = `${it.title || ''} ${it.snippet || ''}`;
+      return containsWord(hay, brand) || containsWord(hay, brandResolved);
+      });
+
+    filteredStrict = strictBrand
+      ? (onlyBrand.length ? onlyBrand : filteredWL)
+      : (onlyBrand.length >= 6 ? onlyBrand : filteredWL);
     }
 
     // Ranking
@@ -681,6 +707,41 @@ async function getEbayToken() {
 
   const data = await response.json();
   return data.access_token;
+}
+async function ebaySearchByImage(imageBase64, { limit = 20 } = {}) {
+  const token = await getEbayToken();
+  const response = await fetch(
+    `https://api.ebay.com/buy/browse/v1/item_summary/search_by_image?limit=${limit}`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: imageBase64
+      }),
+    }
+  );
+  const data = await response.json();
+  const items = (data.itemSummaries || []).map(item => ({
+    title: item.title || '',
+    link: item.itemWebUrl || '',
+    snippet: [
+      item.condition || '',
+      item.categories?.[0]?.categoryName || '',
+      item.itemLocation?.country || '',
+    ].filter(Boolean).join(' · '),
+    price_str: item.price?.value
+      ? `${item.price.value} ${item.price.currency || ''}`.trim()
+      : '',
+    source: 'ebay_image_search',
+    image: item.image?.imageUrl || '',
+    currency: item.price?.currency || '',
+    rawPrice: item.price?.value || null,
+  }));
+
+  return items;
 }
 app.get('/test-ebay', async (req, res) => {
   try {
