@@ -491,7 +491,7 @@ const visionSignals = [
 ];
 
 console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals));
- 
+    
     // === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
 
@@ -535,16 +535,26 @@ const qb = buildCandidateQueries({ brand, model, category, pattern, gender, colo
 const queries = qb.queries;
 const brandResolved = qb.brandResolved;
 
-// 1) Prima prova vera image-search eBay
+// 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
 let usedQuery = 'ebay_image_search';
 
 try {
   const ebayImageItems = await ebaySearchByImage(imageBase64, { limit: 20 });
-  merged = dedupeByLink(ebayImageItems);
-  console.log('EBAY IMAGE SEARCH RESULTS:', merged.length);
+  const googleLensItems = await searchWithGoogleLens(imageBase64);
+
+  const combined = [
+    ...ebayImageItems,
+    ...googleLensItems,
+  ];
+
+  merged = dedupeByLink(combined);
+
+  console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
+  console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
+  console.log('MERGED RESULTS:', merged.length);
 } catch (e) {
-  console.warn('EBAY IMAGE SEARCH FAILED:', e.message);
+  console.warn('IMAGE SEARCH COMBINED FAILED:', e.message);
 }
 
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
@@ -745,8 +755,38 @@ async function ebaySearchByImage(imageBase64, { limit = 20 } = {}) {
     currency: item.price?.currency || '',
     rawPrice: item.price?.value || null,
   }));
-
   return items;
+}
+async function searchWithGoogleLens(imageBase64) {
+  try {
+    const response = await fetch('https://serpapi.com/search.json', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        engine: 'google_lens',
+        api_key: process.env.SERP_API_KEY,
+        image_content: imageBase64
+      })
+    });
+    const data = await response.json();
+    const visualMatches = data.visual_matches || [];
+    const items = visualMatches.map(item => ({
+      title: item.title || '',
+      link: item.link || '',
+      snippet: item.source || '',
+      price_str: item.price || '',
+      source: 'google_lens',
+      image: item.thumbnail || ''
+    }));
+
+    return items;
+
+  } catch (e) {
+    console.warn('GOOGLE LENS ERROR:', e.message);
+    return [];
+  }
 }
 app.get('/test-ebay', async (req, res) => {
   try {
