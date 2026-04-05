@@ -631,7 +631,30 @@ merged = merged.filter(item => {
   if (!hasClothing) return false;
   return true;
 });
+// === FILTRO BRAND + CATEGORIA ===
 
+merged = merged.filter(item => {
+  const text = `${item.title || ''} ${item.snippet || ''}`.toLowerCase();
+
+  // BRAND (da vision o query)
+  const brandSignals = [
+    'harley',
+    'harley-davidson',
+    'harley davidson'
+  ];
+  const hasBrand = brandSignals.some(b => text.includes(b));
+  // CATEGORIA (magliette)
+  const categorySignals = [
+    'shirt',
+    't-shirt',
+    'tee',
+    'maglietta'
+  ];
+  const hasCategory = categorySignals.some(c => text.includes(c));
+  return hasBrand && hasCategory;
+});
+
+console.log('AFTER BRAND FILTER:', merged.length);
 console.log('AFTER QUALITY FILTER:', merged.length);
   console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
   console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
