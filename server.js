@@ -4,7 +4,45 @@ import cors from 'cors';
 import fs from 'fs';
 
 const app = express();
+const TMP_IMAGE_DIR = '/tmp/howmanybucks_uploads';
+const TMP_IMAGE_ROUTE = '/tmp-images';
+const TMP_IMAGE_TTL_MS = 5 * 60 * 1000; // 5 minuti
 
+try {
+  fs.mkdirSync(TMP_IMAGE_DIR, { recursive: true });
+  console.log('[TMP] cartella immagini temporanee pronta:', TMP_IMAGE_DIR);
+} catch (e) {
+  console.warn('[TMP] errore creazione cartella temporanea:', e.message);
+}
+
+app.use(TMP_IMAGE_ROUTE, express.static(TMP_IMAGE_DIR));
+function stripBase64Prefix(imageBase64 = '') {
+  return String(imageBase64).replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
+}
+function saveTempImageAndGetUrl(req, imageBase64) {
+  const cleanBase64 = stripBase64Prefix(imageBase64);
+  const fileName = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const filePath = `${TMP_IMAGE_DIR}/${fileName}`;
+  fs.writeFileSync(filePath, Buffer.from(cleanBase64, 'base64'));
+  setTimeout(() => {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log('[TMP] immagine eliminata:', fileName);
+      }
+    } catch (e) {
+      console.warn('[TMP] errore eliminazione immagine:', e.message);
+    }
+  }, TMP_IMAGE_TTL_MS);
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const publicUrl = `${baseUrl}${TMP_IMAGE_ROUTE}/${fileName}`;
+  console.log('[TMP] immagine temporanea creata:', publicUrl);
+  return {
+    fileName,
+    filePath,
+    publicUrl,
+  };
+}
 const APPAREL_EXCLUDED_TERMS = [
   'case', 'cover', 'phone', 'charger', 'cable', 'lace', 'laces',
   'sock', 'socks', 'hat', 'cap', 'belt', 'keychain', 'sticker',
