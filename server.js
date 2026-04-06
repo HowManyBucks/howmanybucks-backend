@@ -766,12 +766,20 @@ if (!merged.length) {
       .map(it => parseMoney(it.price_str || it.title || it.snippet))
       .filter(Number.isFinite);
 
-    // 📊 filtro dinamico: elimina outlier troppo bassi
     const sorted = [...rawPrices].sort((a, b) => a - b);
-    const medianRaw = sorted[Math.floor(sorted.length / 2)] || 0;
+    const medianRaw = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
 
-  // taglia solo prezzi "sospetti" (meno del 20% della mediana)
-    const prices = rawPrices.filter(p => p >= (medianRaw * 0.2));
+    // filtro outlier più robusto:
+    // - taglia prezzi sotto il 35% della mediana
+    // - taglia prezzi sopra il 250% della mediana
+    const prices = rawPrices.filter(p => {
+      if (!medianRaw) return true;
+      return p >= (medianRaw * 0.35) && p <= (medianRaw * 2.5);
+    });
+
+    console.log('RAW PRICES COUNT:', rawPrices.length);
+    console.log('MEDIAN RAW:', medianRaw);
+    console.log('AFTER PRICE FILTER:', prices.length);
     const { baseMedian, mode, newRatio } = applyConditionHeuristic(prices, topForPricing, condition);
     const suggested = humanRound(baseMedian);
 
