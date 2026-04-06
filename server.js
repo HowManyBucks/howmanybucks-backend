@@ -667,7 +667,10 @@ console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
 console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
 console.log('AFTER DYNAMIC BRAND FILTER:', merged.length);
-
+} catch (e) {
+  console.warn('IMAGE SEARCH COMBINED FAILED:', e.message);
+}
+    
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
 if (!merged.length) {
   for (const q of queries) {
