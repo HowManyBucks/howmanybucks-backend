@@ -631,37 +631,42 @@ merged = merged.filter(item => {
   if (!hasClothing) return false;
   return true;
 });
-// === FILTRO BRAND + CATEGORIA ===
+// === FILTRO BRAND + CATEGORIA DINAMICO ===
+
+const dynamicBrandSignals = uniq([
+  brand,
+  brandResolved,
+  vision.logos?.[0]?.description || ''
+])
+  .map(x => norm(x))
+  .filter(Boolean);
+
+const dynamicCategorySignals = uniq([
+  finalCategory,
+  ...(CATEGORY_SYNONYMS[finalCategory] || [])
+])
+  .map(x => norm(x))
+  .filter(Boolean);
 
 merged = merged.filter(item => {
-  const text = `${item.title || ''} ${item.snippet || ''}`.toLowerCase();
+  const text = norm(`${item.title || ''} ${item.snippet || ''}`);
 
-  // BRAND (da vision o query)
-  const brandSignals = [
-    'harley',
-    'harley-davidson',
-    'harley davidson'
-  ];
-  const hasBrand = brandSignals.some(b => text.includes(b));
-  // CATEGORIA (magliette)
-  const categorySignals = [
-    'shirt',
-    't-shirt',
-    'tee',
-    'maglietta'
-  ];
-  const hasCategory = categorySignals.some(c => text.includes(c));
+  const hasBrand = dynamicBrandSignals.length
+    ? dynamicBrandSignals.some(b => text.includes(b))
+    : true;
+
+  const hasCategory = dynamicCategorySignals.length
+    ? dynamicCategorySignals.some(c => text.includes(c))
+    : true;
+
   return hasBrand && hasCategory;
-});
+  });
 
-console.log('AFTER BRAND FILTER:', merged.length);
-console.log('AFTER QUALITY FILTER:', merged.length);
-  console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
-  console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
-  console.log('MERGED RESULTS:', merged.length);
-} catch (e) {
-  console.warn('IMAGE SEARCH COMBINED FAILED:', e.message);
-}
+console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
+console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
+console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
+console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
+console.log('AFTER DYNAMIC BRAND FILTER:', merged.length);
 
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
 if (!merged.length) {
