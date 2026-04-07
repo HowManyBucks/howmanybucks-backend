@@ -689,6 +689,7 @@ const brandResolved = qb.brandResolved;
 // 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
 let usedQuery = 'ebay_image_search';
+let dynamicHintSignals = [];
 
 try {
   const ebayImageItems = await ebaySearchByImage(imageBase64, { limit: 20 });
@@ -755,7 +756,7 @@ const dynamicCategorySignals = uniq([
   .map(x => norm(x))
   .filter(Boolean);
 
-const dynamicHintSignals = buildVisualHintSignals(
+  dynamicHintSignals = buildVisualHintSignals(
   combined,
   dynamicBrandSignals,
   dynamicCategorySignals
