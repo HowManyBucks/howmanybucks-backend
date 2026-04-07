@@ -651,15 +651,19 @@ const dynamicCategorySignals = uniq([
 merged = merged.filter(item => {
   const text = norm(`${item.title || ''} ${item.snippet || ''}`);
 
-  const hasBrand = dynamicBrandSignals.length
-    ? dynamicBrandSignals.some(b => text.includes(b))
-    : true;
+  let brandScore = 0;
+
+  if (dynamicBrandSignals.length) {
+    if (dynamicBrandSignals.some(b => text.includes(b))) {
+      brandScore = 1;
+    }
+  }
 
   const hasCategory = dynamicCategorySignals.length
     ? dynamicCategorySignals.some(c => text.includes(c))
     : true;
 
-  return hasBrand && hasCategory;
+  return hasCategory;
   });
 
 console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
