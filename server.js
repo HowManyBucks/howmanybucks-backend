@@ -888,38 +888,49 @@ if (!merged.length) {
 
     console.log('TOP_N USATO:', TOP_N);
     console.log('RANKED COUNT:', ranked.length);
+const ebayOnly = topForPricing.filter(it =>
+  String(it.source || '').includes('ebay')
+);
 
+const priceSource = ebayOnly.length >= 5 ? ebayOnly : topForPricing;
 
-    const rawPrices = topForPricing
-      .map(it => parseMoney(it.price_str || it.title || it.snippet))
-      .filter(Number.isFinite);
+const rawPrices = priceSource
+  .map(it => parseMoney(it.price_str || it.title || it.snippet))
+  .filter(Number.isFinite);
 
-    const sorted = [...rawPrices].sort((a, b) => a - b);
-    const medianRaw = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+const sorted = [...rawPrices].sort((a, b) => a - b);
+const medianRaw = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
 
-    // filtro outlier più robusto:
-    // - taglia prezzi sotto il 35% della mediana
-    // - taglia prezzi sopra il 250% della mediana
-    let prices = rawPrices.filter(p => {
+// filtro outlier più robusto:
+// - taglia prezzi sotto il 35% della mediana
+// - taglia prezzi sopra il 250% della mediana
+let prices = rawPrices.filter(p => {
+  if (!medianRaw) return true;
+  return p >= (medianRaw * 0.35) && p <= (medianRaw * 2.5);
+});
+
+// fallback intelligente se pochi dati
+if (prices.length < 8 && rawPrices.length >= 5) {
+  console.log('FALLBACK PRICE FILTER ATTIVO');
+
+  prices = rawPrices.filter(p => {
     if (!medianRaw) return true;
-    return p >= (medianRaw * 0.35) && p <= (medianRaw * 2.5);
-    });
+    return p >= (medianRaw * 0.25) && p <= (medianRaw * 3.0);
+  });
+}
 
-    // 🔁 fallback intelligente se pochi dati  
-    if (prices.length < 8 && rawPrices.length >= 5) {
-      console.log('FALLBACK PRICE FILTER ATTIVO');
+console.log('EBAY ONLY COUNT:', ebayOnly.length);
+console.log('PRICE SOURCE COUNT:', priceSource.length);
+console.log('RAW PRICES COUNT:', rawPrices.length);
+console.log('MEDIAN RAW:', medianRaw);
+console.log('AFTER PRICE FILTER:', prices.length);
 
-      prices = rawPrices.filter(p => {
-      if (!medianRaw) return true;
-      return p >= (medianRaw * 0.25) && p <= (medianRaw * 3.0);
-      });
-    }
-
-    console.log('RAW PRICES COUNT:', rawPrices.length);
-    console.log('MEDIAN RAW:', medianRaw);
-    console.log('AFTER PRICE FILTER:', prices.length);
-    
-    const { baseMedian, mode, newRatio } = applyConditionHeuristic(prices, topForPricing, condition);
+const { baseMedian, mode, newRatio } = applyConditionHeuristic(
+  prices,
+  priceSource,
+  condition
+);
+   
     const suggested = humanRound(baseMedian);
 
     const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
