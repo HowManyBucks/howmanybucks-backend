@@ -173,11 +173,18 @@ function buildVisualHintSignals(items = [], brandSignals = [], categorySignals =
       freq.set(t, (freq.get(t) || 0) + 1);
     }
   }
-  return [...freq.entries()]
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
-    .map(([token]) => token);
+const STOP_WORDS_EXTRA = [
+  'with', 'and', 'the', 'for', 'this', 'that',
+  'john', 'man', 'woman'
+];
+
+return [...freq.entries()]
+  .filter(([_, count]) => count >= 2)
+  .sort((a, b) => b[1] - a[1])
+  .slice(0, 6)
+  .map(([token]) => token)
+  .filter(t => t.length > 2 && !STOP_WORDS_EXTRA.includes(t));
+  
 }
 
 function domainOf(urlStr) {
