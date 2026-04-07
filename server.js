@@ -483,6 +483,21 @@ function scoreItem(it, ctx) {
     if (ctx.gender === 'donna' && G.uomo) s -= 10;
     if (ctx.gender !== 'kids' && G.kids) s -= 6;
   }
+  function percentile(arr, p) {
+  const values = arr.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!values.length) return null;
+  if (values.length === 1) return values[0];
+
+  const idx = (values.length - 1) * p;
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+
+  if (lo === hi) return values[lo];
+
+  const weight = idx - lo;
+  return values[lo] * (1 - weight) + values[hi] * weight;
+  }
+    
   if (ctx.category && containsWord(title, ctx.category)) s += 4;
 
   if (ctx.brand) {
@@ -888,11 +903,21 @@ if (!merged.length) {
 
     console.log('TOP_N USATO:', TOP_N);
     console.log('RANKED COUNT:', ranked.length);
+
 const ebayOnly = topForPricing.filter(it =>
   String(it.source || '').includes('ebay')
 );
 
-const priceSource = ebayOnly.length >= 5 ? ebayOnly : topForPricing;
+const strongHintMatches = ebayOnly.filter(it => {
+  const text = norm(`${it.title || ''} ${it.snippet || ''}`);
+  const hitCount = dynamicHintSignals.filter(h => text.includes(h)).length;
+  return hitCount >= 2;
+});
+
+const priceSource =
+  strongHintMatches.length >= 5
+    ? strongHintMatches
+    : (ebayOnly.length >= 5 ? ebayOnly : topForPricing);
 
 const rawPrices = priceSource
   .map(it => parseMoney(it.price_str || it.title || it.snippet))
@@ -921,17 +946,22 @@ if (prices.length < 8 && rawPrices.length >= 5) {
 
 console.log('EBAY ONLY COUNT:', ebayOnly.length);
 console.log('PRICE SOURCE COUNT:', priceSource.length);
+console.log('STRONG HINT MATCHES COUNT:', strongHintMatches.length);
 console.log('RAW PRICES COUNT:', rawPrices.length);
 console.log('MEDIAN RAW:', medianRaw);
 console.log('AFTER PRICE FILTER:', prices.length);
-
+console.log('SELLABLE BASE:', percentile(prices, 0.25));
+    
 const { baseMedian, mode, newRatio } = applyConditionHeuristic(
   prices,
   priceSource,
   condition
 );
-   
-    const suggested = humanRound(baseMedian);
+
+const sellableBase = percentile(prices, 0.25) ?? baseMedian;
+const suggested = humanRound(sellableBase);
+  
+
 
     const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
     const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
@@ -957,7 +987,7 @@ const { baseMedian, mode, newRatio } = applyConditionHeuristic(
         colorGuess: colorFromVision(vision.colors) || null
       },
       params: { includeShopping: !!includeShopping, condition: mode, strictBrand,
-        form: { brand, model, category, pattern, gender, color: contextScore.color }, kFactor: kVal },
+      form: { brand, model, category, pattern, gender, color: contextScore.color }, kFactor: kVal },
       note: (!brand && !model) ? 'Per un’analisi più puntuale, indica marca e/o modello nel form.' : null,
       stats: {
         resultsFound: merged.length,
@@ -966,6 +996,7 @@ const { baseMedian, mode, newRatio } = applyConditionHeuristic(
         rankedTopUsed: Math.min(filteredStrict.length, TOP_N),
         pricedCount: prices.length,
         baseMedian,
+        sellableBase,
         newMentionRatio: newRatio
       },
       suggestedPrice: suggested,
