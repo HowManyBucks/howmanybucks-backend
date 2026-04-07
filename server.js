@@ -772,10 +772,24 @@ if (!merged.length) {
     // filtro outlier più robusto:
     // - taglia prezzi sotto il 35% della mediana
     // - taglia prezzi sopra il 250% della mediana
-    const prices = rawPrices.filter(p => {
-      if (!medianRaw) return true;
-      return p >= (medianRaw * 0.35) && p <= (medianRaw * 2.5);
+    let prices = rawPrices.filter(p => {
+    if (!medianRaw) return true;
+    return p >= (medianRaw * 0.35) && p <= (medianRaw * 2.5);
     });
+
+    // 🔁 fallback intelligente se pochi dati  
+    if (prices.length < 8 && rawPrices.length >= 5) {
+      console.log('FALLBACK PRICE FILTER ATTIVO');
+
+      prices = rawPrices.filter(p => {
+      if (!medianRaw) return true;
+      return p >= (medianRaw * 0.25) && p <= (medianRaw * 3.0);
+      });
+    }
+
+    console.log('RAW PRICES COUNT:', rawPrices.length);
+    console.log('MEDIAN RAW:', medianRaw);
+    console.log('AFTER PRICE FILTER:', prices.length);
 
     console.log('RAW PRICES COUNT:', rawPrices.length);
     console.log('MEDIAN RAW:', medianRaw);
