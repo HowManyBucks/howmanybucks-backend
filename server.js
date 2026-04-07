@@ -468,7 +468,6 @@ function scoreItem(it, ctx) {
   if (ctx.brand && containsWord(title, ctx.brand)) s += 40;
   if (ctx.model && containsWord(title, ctx.model)) s += 28;
   if (ctx.color && containsWord(title, ctx.color)) s += 6;
-
   if (ctx.gender) {
     const G = {
       uomo: GENDER_MAP.uomo.some(t => title.includes(t)),
@@ -483,7 +482,21 @@ function scoreItem(it, ctx) {
     if (ctx.gender === 'donna' && G.uomo) s -= 10;
     if (ctx.gender !== 'kids' && G.kids) s -= 6;
   }
-  function percentile(arr, p) {
+  if (ctx.category && containsWord(title, ctx.category)) s += 4;
+  if (ctx.brand) {
+    const notThisBrand = ['nike','adidas','puma','reebok','new balance','under armour','levi','h&m','zara','gucci','prada','armani','dolce',
+      'diesel','fila','kappa','the north face','north face','patagonia','ralph lauren','lacoste','superdry','harley davidson']
+      .filter(b => b !== norm(ctx.brand));
+    if (notThisBrand.some(b => containsWord(title, b))) s -= 25;
+  }
+  const d = domainOf(it.link);
+  const w = ctx.siteWeights[d] || 0;
+  s += Math.min(8, Math.round(w * 6));
+  return Math.max(0, Math.min(100, s));
+}
+
+// ===== CONDITION HEURISTIC =====
+function percentile(arr, p) {
   const values = arr.filter(Number.isFinite).sort((a, b) => a - b);
   if (!values.length) return null;
   if (values.length === 1) return values[0];
@@ -496,24 +509,7 @@ function scoreItem(it, ctx) {
 
   const weight = idx - lo;
   return values[lo] * (1 - weight) + values[hi] * weight;
-  }
-    
-  if (ctx.category && containsWord(title, ctx.category)) s += 4;
-
-  if (ctx.brand) {
-    const notThisBrand = ['nike','adidas','puma','reebok','new balance','under armour','levi','h&m','zara','gucci','prada','armani','dolce',
-      'diesel','fila','kappa','the north face','north face','patagonia','ralph lauren','lacoste','superdry','harley davidson']
-      .filter(b => b !== norm(ctx.brand));
-    if (notThisBrand.some(b => containsWord(title, b))) s -= 25;
-  }
-
-  const d = domainOf(it.link);
-  const w = ctx.siteWeights[d] || 0;
-  s += Math.min(8, Math.round(w * 6));
-  return Math.max(0, Math.min(100, s));
 }
-
-// ===== CONDITION HEURISTIC =====
 function applyConditionHeuristic(prices, items, condition) {
   if (condition === 'new' || condition === 'used') {
     const { filtered } = robustStats(prices);
