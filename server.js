@@ -760,8 +760,22 @@ if (!merged.length) {
       .sort((a,b) => b._score - a._score);
 
     // Prezzi
-    const TOP_N = 40;
+    let TOP_N = 40;
+
+    // fallback: se dopo i filtri restano pochi risultati, usa più elementi
+    if (ranked.length > 40 && ranked.length < 80) {
+      TOP_N = 60;
+    }
+    if (ranked.length >= 80) {
+      TOP_N = 80;
+    }
+
     const topForPricing = ranked.slice(0, TOP_N);
+
+    console.log('TOP_N USATO:', TOP_N);
+    console.log('RANKED COUNT:', ranked.length);
+
+
     const rawPrices = topForPricing
       .map(it => parseMoney(it.price_str || it.title || it.snippet))
       .filter(Number.isFinite);
