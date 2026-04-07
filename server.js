@@ -628,10 +628,32 @@ if (visionSignals.some(l =>
 )) {
   detectedCategory = 'shoe';
 }
+const formCategory = (category || '').toLowerCase().trim();
+const photoCategory = (detectedCategory || '').toLowerCase().trim();
 
+let finalCategory = formCategory || photoCategory || 't-shirt';
+let categoryValidation = 'no-photo-signal';
+
+if (formCategory && photoCategory) {
+  if (formCategory === photoCategory) {
+    finalCategory = formCategory;
+    categoryValidation = 'match';
+  } else {
+    finalCategory = photoCategory;
+    categoryValidation = 'photo-overrides-form';
+  }
+} else if (formCategory) {
+  finalCategory = formCategory;
+  categoryValidation = 'form-only';
+} else if (photoCategory) {
+  finalCategory = photoCategory;
+  categoryValidation = 'photo-only';
+}
+    
 console.log("FINAL CATEGORY:", finalCategory);
 console.log("CATEGORY VALIDATION:", categoryValidation);
 console.log("VISION LABELS:", labels);
+    
     // Geo
     const ctxGeo = getSearchContext({ country, continent });
     const { hl, gl, siteList, siteWeights } = ctxGeo;
