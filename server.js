@@ -53,25 +53,31 @@ function isExcludedApparelResult(text = '') {
   return APPAREL_EXCLUDED_TERMS.some(term => t.includes(term));
 }
 function matchesApparelCategory(text = '', finalCategory = '') {
-  const t = String(text).toLowerCase();
-  const c = String(finalCategory).toLowerCase();
-
-  if (!c) return true;
-
-  const map = {
-    't-shirt': ['t-shirt', 'tee', 'shirt', 'short sleeve'],
-    'hoodie': ['hoodie', 'sweatshirt'],
-    'jacket': ['jacket', 'coat', 'blazer'],
+const t = String(text).toLowerCase();
+const c = String(finalCategory).toLowerCase();
+if (!c) return true;
+const map = {
+    't-shirt': ['t-shirt', 'tee', 'shirt', 'short sleeve', 'maglietta'],
+    'hoodie': ['hoodie', 'sweatshirt', 'felpa'],
+    'jacket': ['jacket', 'coat', 'blazer', 'giacca', 'piumino'],
     'jeans': ['jeans', 'denim'],
-    'shirt': ['shirt', 'button down', 'button-up'],
-    'dress': ['dress', 'gown'],
-    'skirt': ['skirt'],
-    'sweater': ['sweater', 'knit', 'pullover'],
+    'shirt': ['shirt', 'button down', 'button-up', 'camicia'],
+    'dress': ['dress', 'gown', 'vestito'],
+    'skirt': ['skirt', 'gonna'],
+    'sweater': ['sweater', 'knit', 'pullover', 'maglione', 'cardigan'],
     'polo': ['polo'],
+    'shoe': [
+      'shoe', 'shoes', 'sneaker', 'sneakers', 'trainer', 'trainers',
+      'running shoe', 'basketball shoe', 'skate shoe', 'scarpa', 'scarpe'
+    ],
+    'sneaker': [
+      'shoe', 'shoes', 'sneaker', 'sneakers', 'trainer', 'trainers',
+      'running shoe', 'basketball shoe', 'skate shoe', 'scarpa', 'scarpe'
+    ],
   };
 
   const keywords = map[c] || [c];
-  return keywords.some(k => t.includes(k));
+  return keywords.some(k => t.includes(k)); 
 }
 
 // CORS: localhost (qualsiasi porta) + dominio prod
@@ -146,6 +152,34 @@ const uniq = arr => {
   for (const x of arr) { const k = norm(x); if (!k || seen.has(k)) continue; seen.add(k); out.push(x.trim()); }
   return out;
 };
+function buildVisualHintSignals(items = [], brandSignals = [], categorySignals = []) {
+  const generic = new Set([
+    ...Array.from(STOPWORDS),
+    'new', 'used', 'mens', 'men', 'womens', 'women',
+    'size', 'sizes', 'authentic', 'original', 'retro',
+    'black', 'white', 'red', 'blue', 'green', 'brown',
+    ...brandSignals.map(norm),
+    ...categorySignals.map(norm),
+  ]);
+  const freq = new Map();
+  for (const it of items) {
+    const tokens = norm(`${it.title || ''} ${it.snippet || ''}`)
+      .split(' ')
+      .filter(Boolean)
+      .filter(t => t.length >= 3)
+      .filter(t => !generic.has(t))
+      .filter(t => !/^\d+$/.test(t) || /^\d{3,6}$/.test(t));
+    for (const t of tokens) {
+      freq.set(t, (freq.get(t) || 0) + 1);
+    }
+  }
+  return [...freq.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([token]) => token);
+}
+
 function domainOf(urlStr) {
   try {
     const u = new URL(urlStr);
@@ -165,14 +199,27 @@ const STOPWORDS = new Set([
   'maglia','maglietta','tessuto','abbigliamento','manica','uomo','donna','bambino','bambina','bimbo','bimba','adulto','ragazzo','ragazza'
 ]);
 const CATEGORY_SYNONYMS = {
-  't-shirt': ['t-shirt','tshirt','tee','maglietta'],
+  't-shirt': ['t-shirt','tshirt','tee','maglietta','shirt'],
   'felpa': ['felpa','hoodie','sweatshirt'],
   'polo': ['polo'],
-  'camicia': ['camicia','shirt'],
+  'camicia': ['camicia','shirt','button down','button-up'],
   'pantaloni': ['pantaloni','trousers','pants'],
   'shorts': ['shorts','bermuda'],
   'gonna': ['gonna','skirt'],
   'vestito': ['vestito','dress'],
+  'jacket': ['jacket','coat','giacca','blazer'],
+  'jeans': ['jeans','denim'],
+  'sweater': ['sweater','maglione','pullover','cardigan'],
+  'shoe': [
+    'shoe','shoes','scarpa','scarpe','sneaker','sneakers',
+    'trainer','trainers','running shoe','basketball shoe',
+    'skate shoe'
+  ],
+  'sneaker': [
+    'shoe','shoes','scarpa','scarpe','sneaker','sneakers',
+    'trainer','trainers','running shoe','basketball shoe',
+    'skate shoe'
+  ],
 };
 const PATTERN_SYNONYMS = {
   'righe': ['righe','rigato','a righe','striped','stripes','pinstripe'],
@@ -551,36 +598,35 @@ const visionSignals = [
 ...visionTextTokens
 ];
 
-console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals));
+console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals)); 
     
-    // === DEDUZIONE CATEGORIA ===
+// === DEDUZIONE CATEGORIA ===
 let detectedCategory = '';
 
-if (visionSignals.some(l => l.includes('t-shirt') || l.includes('shirt'))) detectedCategory = 't-shirt';
-if (visionSignals.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) detectedCategory = 'hoodie';
-if (visionSignals.some(l => l.includes('jacket') || l.includes('coat'))) detectedCategory = 'jacket';
-if (visionSignals.some(l => l.includes('jeans') || l.includes('denim'))) detectedCategory = 'jeans';
-    
-const formCategory = (category || '').toLowerCase().trim();
-const photoCategory = (detectedCategory || '').toLowerCase().trim();
-
-let finalCategory = formCategory || photoCategory || 't-shirt';
-let categoryValidation = 'no-photo-signal';
-
-if (formCategory && photoCategory) {
-  if (formCategory === photoCategory) {
-    finalCategory = formCategory;
-    categoryValidation = 'match';
-  } else {
-    finalCategory = photoCategory;
-    categoryValidation = 'photo-overrides-form';
-  }
-} else if (formCategory) {
-  finalCategory = formCategory;
-  categoryValidation = 'form-only';
-} else if (photoCategory) {
-  finalCategory = photoCategory;
-  categoryValidation = 'photo-only';
+if (visionSignals.some(l => l.includes('t-shirt') || l.includes('shirt'))) {
+  detectedCategory = 't-shirt';
+}
+if (visionSignals.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) {
+  detectedCategory = 'hoodie';
+}
+if (visionSignals.some(l => l.includes('jacket') || l.includes('coat') || l.includes('blazer'))) {
+  detectedCategory = 'jacket';
+}
+if (visionSignals.some(l => l.includes('jeans') || l.includes('denim'))) {
+  detectedCategory = 'jeans';
+}
+if (visionSignals.some(l =>
+  l.includes('shoe') ||
+  l.includes('shoes') ||
+  l.includes('sneaker') ||
+  l.includes('sneakers') ||
+  l.includes('trainer') ||
+  l.includes('trainers') ||
+  l.includes('running shoe') ||
+  l.includes('basketball shoe') ||
+  l.includes('skate shoe')
+)) {
+  detectedCategory = 'shoe';
 }
 
 console.log("FINAL CATEGORY:", finalCategory);
@@ -624,16 +670,33 @@ merged = merged.filter(item => {
 
   // 2) Deve contenere almeno un segnale clothing
   const clothingKeywords = [
-    'shirt', 't-shirt', 'tee', 'hoodie', 'sweatshirt',
-    'jacket', 'coat', 'jeans', 'pants'
+  // TOP
+  'shirt', 't-shirt', 'tee', 'polo', 'top', 'tank', 'canotta',
+
+  // UPPER
+  'hoodie', 'sweatshirt', 'felpa', 'maglione', 'sweater', 'cardigan',
+
+  // OUTERWEAR
+  'jacket', 'coat', 'giacca', 'piumino', 'blazer',
+
+  // BOTTOM
+  'jeans', 'pants', 'trousers', 'pantaloni', 'shorts', 'gonna', 'skirt',
+
+  // FULL BODY
+  'dress', 'vestito',
+
+  // SHOES
+  'shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers',
+  'trainer', 'trainers', 'running shoe', 'basketball shoe', 'skate shoe'
   ];
+  
   const hasClothing = clothingKeywords.some(k => text.includes(k));
   if (!hasClothing) return false;
   return true;
 });
 // === FILTRO BRAND + CATEGORIA DINAMICO ===
 
-const dynamicBrandSignals = uniq([
+  const dynamicBrandSignals = uniq([
   brand,
   brandResolved,
   vision.logos?.[0]?.description || ''
@@ -648,23 +711,41 @@ const dynamicCategorySignals = uniq([
   .map(x => norm(x))
   .filter(Boolean);
 
+const dynamicHintSignals = buildVisualHintSignals(
+  combined,
+  dynamicBrandSignals,
+  dynamicCategorySignals
+);
+
 merged = merged.filter(item => {
   const text = norm(`${item.title || ''} ${item.snippet || ''}`);
 
-  let brandScore = 0;
-
-  if (dynamicBrandSignals.length) {
-    if (dynamicBrandSignals.some(b => text.includes(b))) {
-      brandScore = 1;
-    }
-  }
+  const hasBrand = dynamicBrandSignals.length
+    ? dynamicBrandSignals.some(b => text.includes(b))
+    : false;
 
   const hasCategory = dynamicCategorySignals.length
     ? dynamicCategorySignals.some(c => text.includes(c))
     : true;
 
-  return hasCategory;
-  });
+  const hasHint = dynamicHintSignals.length
+    ? dynamicHintSignals.some(h => text.includes(h))
+    : false;
+
+  if (!hasCategory) return false;
+
+  if (dynamicBrandSignals.length) {
+    return hasBrand || hasHint;
+  }
+
+  return hasHint || hasCategory;
+});
+
+console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
+console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
+console.log('DYNAMIC HINT SIGNALS:', dynamicHintSignals);
+console.log('AFTER DYNAMIC BRAND FILTER:', merged.length);
+
 
 console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
 console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
@@ -808,10 +889,7 @@ if (!merged.length) {
     console.log('RAW PRICES COUNT:', rawPrices.length);
     console.log('MEDIAN RAW:', medianRaw);
     console.log('AFTER PRICE FILTER:', prices.length);
-
-    console.log('RAW PRICES COUNT:', rawPrices.length);
-    console.log('MEDIAN RAW:', medianRaw);
-    console.log('AFTER PRICE FILTER:', prices.length);
+    
     const { baseMedian, mode, newRatio } = applyConditionHeuristic(prices, topForPricing, condition);
     const suggested = humanRound(baseMedian);
 
