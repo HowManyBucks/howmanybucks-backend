@@ -712,8 +712,6 @@ function extractProductInfo({
 // 1) Colore da Vision (dominante)
 let color = "Non identificato";
 
-const colorFromVision = visionPreview?.colorGuess || null;
-
 // 2) Colori da labels Vision
 const colorKeywords = {
   black: "Nero",
@@ -738,11 +736,16 @@ for (const key in colorKeywords) {
   }
 }
 
-// 3) Priorità finale
-if (colorFromVision) {
-  color = colorFromVision.charAt(0).toUpperCase() + colorFromVision.slice(1);
-} else if (labelColor) {
+if (labelColor) {
   color = labelColor;
+}
+
+return {
+  category,
+  brand,
+  model,
+  color,
+};
 }
   
 // ===== ROUTES =====
