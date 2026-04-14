@@ -565,9 +565,18 @@ const isBlacklisted = (host) => {
 };
 
 // 🔵 FUNZIONE ESTRAZIONE INFO PRODOTTO
-function extractProductInfo(visionData) {
-  const labels = (visionData.labelAnnotations || []).map(l => l.description.toLowerCase());
-  const text = labels.join(" ");
+function extractProductInfo({
+  labelAnnotations = [],
+  logoAnnotations = [],
+  text = '',
+  candidateTitles = [],
+}) {
+  const labels = labelAnnotations.map(l => (l.description || '').toLowerCase());
+  const logos = logoAnnotations.map(l => (l.description || '').toLowerCase());
+  const ocrText = String(text || '').toLowerCase();
+  const titlesText = candidateTitles.join(' ').toLowerCase();
+  const fullText = [labels.join(' '), logos.join(' '), ocrText, titlesText].join(' ');
+  const text = fullText;
 
   // 🔹 TIPOLGIA
   let category = "Non identificata";
@@ -577,8 +586,14 @@ function extractProductInfo(visionData) {
 
   // 🔹 MARCA (semplificato)
   let brand = "Non identificata";
-  const brands = ["nike", "adidas", "zara", "h&m", "gucci"];
-  for (let b of brands) {
+  const brands = [
+    "nike", "adidas", "zara", "h&m", "gucci", "puma", "reebok",
+    "new balance", "asics", "converse", "vans", "balenciaga",
+    "louis vuitton", "prada", "armani", "dolce & gabbana",
+    "harley davidson"
+  ];
+
+  for (const b of brands) {
     if (text.includes(b)) {
       brand = b.toUpperCase();
       break;
@@ -587,6 +602,24 @@ function extractProductInfo(visionData) {
 
   // 🔹 MODELLO (MVP semplice)
   let model = "Non identificato";
+
+  const modelPatterns = [
+    /\bair force 1\b/i,
+    /\bair max\b/i,
+    /\bdunk\b/i,
+    /\b574\b/i,
+    /\b2384\b/i,
+    /\b[0-9]{3,6}\b/g,
+    /\b[a-z]{1,4}[0-9]{2,6}\b/gi
+  ];
+
+  for (const pattern of modelPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      model = Array.isArray(match) ? match[0] : match;
+      break;
+    }
+  }
 
   // 🔹 COLORE
   let color = "Non identificato";
@@ -636,10 +669,6 @@ const tempImageUrl = tempImage.publicUrl;
 console.log('TEMP IMAGE URL:', tempImageUrl);
 const vision = await googleVisionAnnotate(imageBase64);
 
-const productInfo = extractProductInfo({
-  labelAnnotations: vision.labels,
-});
-console.log("PRODUCT INFO:", productInfo);
 const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
 const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
 const text = (vision.text || '').toLowerCase();
@@ -883,6 +912,14 @@ if (!merged.length) {
     usedQuery = q;
   }
 }
+const productInfo = extractProductInfo({
+  labelAnnotations: vision.labels,
+  logoAnnotations: vision.logos,
+  text: vision.text,
+  candidateTitles: merged.map(it => it.title || ''),
+});
+console.log("PRODUCT INFO:", productInfo);
+    
     // Whitelist + blacklist
     const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
     const filteredWL = merged.filter(it => {
