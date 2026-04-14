@@ -570,6 +570,7 @@ function extractProductInfo({
   logoAnnotations = [],
   text = '',
   candidateTitles = [],
+  visionColors = [],
 }) {
   const labels = labelAnnotations.map(l => (l.description || '').toLowerCase());
   const logos = logoAnnotations.map(l => (l.description || '').toLowerCase());
@@ -707,45 +708,64 @@ function extractProductInfo({
     model = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
   }
 
-// 🔹 COLORE (STRUTTURATO)
-
-// 1) Colore da Vision (dominante)
+// 🔷 COLORE (VISION FIRST + SOGLIA 33,01%)
 let color = "Non identificato";
 
-// 2) Colori da labels Vision
-const colorKeywords = {
-  black: "Nero",
-  white: "Bianco",
-  red: "Rosso",
-  blue: "Blu",
-  green: "Verde",
-  brown: "Marrone",
-  grey: "Grigio",
-  gray: "Grigio",
-  beige: "Beige",
-  yellow: "Giallo",
-  pink: "Rosa",
-  orange: "Arancione",
-};
+// 1) prova con colore dominante Vision
+if (visionColors.length) {
+  const sortedColors = [...visionColors].sort(
+    (a, b) => (b.pixelFraction || 0) - (a.pixelFraction || 0)
+  );
 
-let labelColor = null;
-for (const key in colorKeywords) {
-  if (searchText.includes(key)) {
-    labelColor = colorKeywords[key];
-    break;
+  const top = sortedColors[0];
+
+  if ((top.pixelFraction || 0) > 0.3301) {
+    const red = Math.round(top.color?.red || 0);
+    const green = Math.round(top.color?.green || 0);
+    const blue = Math.round(top.color?.blue || 0);
+
+    if (red > 200 && green > 200 && blue > 200) color = "Bianco";
+    else if (red < 60 && green < 60 && blue < 60) color = "Nero";
+    else if (red > 150 && green > 100 && blue < 90) color = "Marrone";
+    else if (red > green && red > blue) color = "Rosso";
+    else if (green > red && green > blue) color = "Verde";
+    else if (blue > red && blue > green) color = "Blu";
+    else if (red > 200 && green > 200 && blue < 120) color = "Giallo";
+    else if (red > 200 && blue > 150 && green < 180) color = "Rosa";
+    else if (red > 150 && green > 120 && blue > 150) color = "Viola";
+    else if (red > 120 && green > 120 && blue > 120) color = "Grigio";
+    else if (red > 180 && green > 160 && blue > 120) color = "Beige";
   }
 }
 
-if (labelColor) {
-  color = labelColor;
-}
+// 2) fallback su labels/testo solo se Vision non basta
+if (color === "Non identificato") {
+  const colorKeywords = {
+    black: "Nero",
+    white: "Bianco",
+    red: "Rosso",
+    blue: "Blu",
+    green: "Verde",
+    brown: "Marrone",
+    grey: "Grigio",
+    gray: "Grigio",
+    beige: "Beige",
+    yellow: "Giallo",
+    pink: "Rosa",
+    orange: "Arancione",
+  };
 
-return {
-  category,
-  brand,
-  model,
-  color,
-};
+  let labelColor = null;
+  for (const key in colorKeywords) {
+    if (searchText.includes(key)) {
+      labelColor = colorKeywords[key];
+      break;
+    }
+  }
+
+  if (labelColor) {
+    color = labelColor;
+  }
 }
   
 // ===== ROUTES =====
@@ -1031,6 +1051,7 @@ const productInfo = extractProductInfo({
   logoAnnotations: vision.logos,
   text: vision.text,
   candidateTitles: merged.map(it => it.title || ''),
+  visionColors: vision.colors,
 });
 console.log("PRODUCT INFO:", productInfo);
     
