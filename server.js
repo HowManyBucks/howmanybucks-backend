@@ -570,13 +570,12 @@ function extractProductInfo({
   logoAnnotations = [],
   text = '',
   candidateTitles = [],
-}) 
+}) {
   const labels = labelAnnotations.map(l => (l.description || '').toLowerCase());
   const logos = logoAnnotations.map(l => (l.description || '').toLowerCase());
   const ocrText = String(text || '').toLowerCase();
   const titlesText = candidateTitles.join(' ').toLowerCase();
-  const fullText = [labels.join(' '), logos.join(' '), ocrText, titlesText].join(' ');
-  const text = fullText;
+  const searchText = [labels.join(' '), logos.join(' '), ocrText, titlesText].join(' ');
 
   // 🔹 TIPOLGIA
   let category = "Non identificata";
