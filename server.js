@@ -757,19 +757,6 @@ function extractProductInfo({
   };
 }
 
-  // 🔹 COLORE
-  let color = "Non identificato";
-  if (text.includes("black")) color = "Nero";
-  if (text.includes("white")) color = "Bianco";
-  if (text.includes("red")) color = "Rosso";
-
-  return {
-    category,
-    brand,
-    model,
-    color,
-  };
-}
 // ===== ROUTES =====
 app.get('/', (_, res) => {
   res.type('html').send(`<h1>HOWMANYBUCKS – Backend</h1>
