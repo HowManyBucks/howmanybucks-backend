@@ -1017,6 +1017,10 @@ const suggested = humanRound(sellableBase);
       success: true,
       geo: { hl, gl, countryUsed: country || ENV.PRICE_COUNTRY, continentUsed: continent || null, sitesQueried: siteList.slice(0, TOP_SITES) },
       brandResolved,
+      category: productInfo.category,
+      brand: productInfo.brand,
+      model: productInfo.model,
+      color: productInfo.color,
       queryUsed: usedQuery,
       queriesTried: queries.slice(0, 8),
       visionPreview: {
