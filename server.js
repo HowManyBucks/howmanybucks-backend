@@ -707,56 +707,44 @@ function extractProductInfo({
     model = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
   }
 
-  // 🔹 COLORE
-  let color = "Non identificato";
+// 🔹 COLORE (STRUTTURATO)
 
-  const COLOR_MAP = {
-    nero: ['black', 'nero', 'noir'],
-    bianco: ['white', 'bianco', 'blanc'],
-    rosso: ['red', 'rosso', 'rouge'],
-    blu: ['blue', 'navy', 'blu'],
-    azzurro: ['light blue', 'sky blue', 'azzurro'],
-    verde: ['green', 'olive', 'verde'],
-    giallo: ['yellow', 'mustard', 'giallo'],
-    rosa: ['pink', 'rose', 'rosa'],
-    viola: ['purple', 'violet', 'viola'],
-    grigio: ['grey', 'gray', 'grigio'],
-    marrone: ['brown', 'tan', 'marrone', 'beige', 'taupe'],
-    arancione: ['orange', 'arancione']
-  };
+// 1) Colore da Vision (dominante)
+let color = "Non identificato";
 
-  const colorScores = new Map();
+const colorFromVision = visionPreview?.colorGuess || null;
 
-  function addColorScore(name, score) {
-    colorScores.set(name, (colorScores.get(name) || 0) + score);
+// 2) Colori da labels Vision
+const colorKeywords = {
+  black: "Nero",
+  white: "Bianco",
+  red: "Rosso",
+  blue: "Blu",
+  green: "Verde",
+  brown: "Marrone",
+  grey: "Grigio",
+  gray: "Grigio",
+  beige: "Beige",
+  yellow: "Giallo",
+  pink: "Rosa",
+  orange: "Arancione",
+};
+
+let labelColor = null;
+for (const key in colorKeywords) {
+  if (searchText.includes(key)) {
+    labelColor = colorKeywords[key];
+    break;
   }
-
-  // 1) titoli risultati
-  for (const [itColor, variants] of Object.entries(COLOR_MAP)) {
-    for (const v of variants) {
-      for (const title of uniqueTitles) {
-        if (title.toLowerCase().includes(v)) addColorScore(itColor, 15);
-      }
-      if (ocrText.includes(v)) addColorScore(itColor, 10);
-      if (labels.some(l => l.includes(v))) addColorScore(itColor, 8);
-    }
-  }
-
-  // 2) supporto da Vision dominante
-  
-  if (colorScores.size) {
-    color = [...colorScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
-    color = color.charAt(0).toUpperCase() + color.slice(1);
-  }
-
-  return {
-    category,
-    brand,
-    model,
-    color,
-  };
 }
 
+// 3) Priorità finale
+if (colorFromVision) {
+  color = colorFromVision.charAt(0).toUpperCase() + colorFromVision.slice(1);
+} else if (labelColor) {
+  color = labelColor;
+}
+  
 // ===== ROUTES =====
 app.get('/', (_, res) => {
   res.type('html').send(`<h1>HOWMANYBUCKS – Backend</h1>
