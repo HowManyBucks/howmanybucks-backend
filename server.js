@@ -570,7 +570,7 @@ function extractProductInfo({
   logoAnnotations = [],
   text = '',
   candidateTitles = [],
-}) {
+}) 
   const labels = labelAnnotations.map(l => (l.description || '').toLowerCase());
   const logos = logoAnnotations.map(l => (l.description || '').toLowerCase());
   const ocrText = String(text || '').toLowerCase();
@@ -911,7 +911,7 @@ if (!merged.length) {
     merged = dedupeByLink(fb);
     usedQuery = q;
   }
-}
+ }
 const productInfo = extractProductInfo({
   labelAnnotations: vision.labels,
   logoAnnotations: vision.logos,
