@@ -564,6 +564,43 @@ const isBlacklisted = (host) => {
   });
 };
 
+// 🔵 FUNZIONE ESTRAZIONE INFO PRODOTTO
+function extractProductInfo(visionData) {
+  const labels = (visionData.labelAnnotations || []).map(l => l.description.toLowerCase());
+  const text = labels.join(" ");
+
+  // 🔹 TIPOLGIA
+  let category = "Non identificata";
+  if (text.includes("shoe") || text.includes("sneaker")) category = "Scarpe";
+  if (text.includes("shirt") || text.includes("t-shirt")) category = "Maglietta";
+  if (text.includes("hoodie") || text.includes("sweatshirt")) category = "Felpa";
+
+  // 🔹 MARCA (semplificato)
+  let brand = "Non identificata";
+  const brands = ["nike", "adidas", "zara", "h&m", "gucci"];
+  for (let b of brands) {
+    if (text.includes(b)) {
+      brand = b.toUpperCase();
+      break;
+    }
+  }
+
+  // 🔹 MODELLO (MVP semplice)
+  let model = "Non identificato";
+
+  // 🔹 COLORE
+  let color = "Non identificato";
+  if (text.includes("black")) color = "Nero";
+  if (text.includes("white")) color = "Bianco";
+  if (text.includes("red")) color = "Rosso";
+
+  return {
+    category,
+    brand,
+    model,
+    color,
+  };
+}
 // ===== ROUTES =====
 app.get('/', (_, res) => {
   res.type('html').send(`<h1>HOWMANYBUCKS – Backend</h1>
@@ -598,6 +635,11 @@ const tempImageUrl = tempImage.publicUrl;
 
 console.log('TEMP IMAGE URL:', tempImageUrl);
 const vision = await googleVisionAnnotate(imageBase64);
+
+const productInfo = extractProductInfo({
+  labelAnnotations: vision.labels,
+});
+console.log("PRODUCT INFO:", productInfo);
 const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
 const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
 const text = (vision.text || '').toLowerCase();
