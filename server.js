@@ -583,42 +583,179 @@ function extractProductInfo({
   if (searchText.includes("shirt") || searchText.includes("t-shirt")) category = "Maglietta";
   if (searchText.includes("hoodie") || searchText.includes("sweatshirt")) category = "Felpa";
 
-  // 🔹 MARCA (semplificato)
-  let brand = "Non identificata";
-  const brands = [
-    "nike", "adidas", "zara", "h&m", "gucci", "puma", "reebok",
-    "new balance", "asics", "converse", "vans", "balenciaga",
-    "louis vuitton", "prada", "armani", "dolce & gabbana",
-    "harley davidson"
+    // 🔹 TESTI NORMALIZZATI
+  const tokens = searchText
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .map(t => t.trim())
+    .filter(Boolean);
+
+  const uniqueTitles = candidateTitles
+    .map(t => String(t || '').trim())
+    .filter(Boolean);
+
+  // 🔹 BRAND CANDIDATES
+  const BRAND_DICTIONARY = [
+    'nike', 'adidas', 'puma', 'reebok', 'new balance', 'asics', 'converse', 'vans',
+    'under armour', 'the north face', 'north face', 'patagonia', 'superdry',
+    'harley davidson', 'levi\'s', 'levis', 'diesel', 'fila', 'kappa', 'lacoste',
+    'ralph lauren', 'polo ralph lauren', 'tommy hilfiger', 'calvin klein',
+    'zara', 'h&m', 'hm', 'uniqlo', 'gucci', 'prada', 'armani', 'emporio armani',
+    'giorgio armani', 'dolce & gabbana', 'd&g', 'balenciaga', 'louis vuitton',
+    'valentino', 'fendi', 'burberry', 'moncler', 'off-white', 'stone island'
   ];
 
-  for (const b of brands) {
-    if (searchText.includes(b)) {
-      brand = b.toUpperCase();
-      break;
+  const brandScores = new Map();
+
+  function addBrandScore(name, score) {
+    if (!name) return;
+    const key = name.toLowerCase();
+    brandScores.set(key, (brandScores.get(key) || 0) + score);
+  }
+
+  // 1) priorità ai loghi Vision
+  for (const logo of logos) {
+    for (const brandName of BRAND_DICTIONARY) {
+      if (logo.includes(brandName)) addBrandScore(brandName, 100);
     }
   }
 
-  // 🔹 MODELLO (MVP semplice)
+  // 2) OCR + labels + titoli
+  for (const brandName of BRAND_DICTIONARY) {
+    if (searchText.includes(brandName)) addBrandScore(brandName, 30);
+  }
+
+  // 3) bonus se compare nei titoli più di una volta
+  for (const brandName of BRAND_DICTIONARY) {
+    let count = 0;
+    for (const title of uniqueTitles) {
+      if (title.toLowerCase().includes(brandName)) count++;
+    }
+    if (count > 0) addBrandScore(brandName, count * 20);
+  }
+
+  let brand = "Non identificata";
+  if (brandScores.size) {
+    const topBrand = [...brandScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    brand = topBrand.toUpperCase();
+  }
+
+  // 🔹 MODELLO
   let model = "Non identificato";
 
-  const modelPatterns = [
-    /\bair force 1\b/i,
-    /\bair max\b/i,
-    /\bdunk\b/i,
-    /\b574\b/i,
-    /\b2384\b/i,
-    /\b[0-9]{3,6}\b/g,
-    /\b[a-z]{1,4}[0-9]{2,6}\b/gi
+  const MODEL_BLACKLIST = new Set([
+    'nike', 'adidas', 'puma', 'reebok', 'shoe', 'shoes', 'sneaker', 'sneakers',
+    'scarpa', 'scarpe', 'shirt', 't-shirt', 'hoodie', 'felpa', 'rosso', 'red',
+    'black', 'white', 'blue', 'green', 'new', 'used', 'man', 'woman', 'uomo', 'donna'
+  ]);
+
+  const modelCandidates = [];
+
+  // 1) pattern forti nei titoli
+  const strongModelPatterns = [
+    /\bair force 1\b/gi,
+    /\bair max(?:\s?[a-z0-9]+)?\b/gi,
+    /\bdunk(?:\s+low|\s+high|\s+sb)?\b/gi,
+    /\b574\b/g,
+    /\b550\b/g,
+    /\b9060\b/g,
+    /\b2002r\b/gi,
+    /\b530\b/g,
+    /\bct[0-9]{3,6}\b/gi,
+    /\bdq[0-9]{3,6}\b/gi,
+    /\bdm[0-9]{3,6}\b/gi,
+    /\bsku[:\s]?[a-z0-9\-]{4,20}\b/gi,
+    /\b[a-z]{1,5}[0-9]{2,6}[a-z]?\b/gi,
+    /\b[0-9]{3,6}\b/g
   ];
 
-  for (const pattern of modelPatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      model = Array.isArray(match) ? match[0] : match;
-      break;
+  for (const title of uniqueTitles) {
+    const lowerTitle = title.toLowerCase();
+
+    for (const pattern of strongModelPatterns) {
+      const matches = lowerTitle.match(pattern);
+      if (matches) {
+        for (const m of matches) {
+          const cleaned = m.trim();
+          if (!MODEL_BLACKLIST.has(cleaned)) {
+            modelCandidates.push(cleaned);
+          }
+        }
+      }
     }
   }
+
+  // 2) OCR come supporto
+  for (const pattern of strongModelPatterns) {
+    const matches = ocrText.match(pattern);
+    if (matches) {
+      for (const m of matches) {
+        const cleaned = m.trim();
+        if (!MODEL_BLACKLIST.has(cleaned)) {
+          modelCandidates.push(cleaned);
+        }
+      }
+    }
+  }
+
+  // 3) ranking modello per frequenza
+  if (modelCandidates.length) {
+    const freq = new Map();
+    for (const m of modelCandidates) {
+      freq.set(m, (freq.get(m) || 0) + 1);
+    }
+    model = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  // 🔹 COLORE
+  let color = "Non identificato";
+
+  const COLOR_MAP = {
+    nero: ['black', 'nero', 'noir'],
+    bianco: ['white', 'bianco', 'blanc'],
+    rosso: ['red', 'rosso', 'rouge'],
+    blu: ['blue', 'navy', 'blu'],
+    azzurro: ['light blue', 'sky blue', 'azzurro'],
+    verde: ['green', 'olive', 'verde'],
+    giallo: ['yellow', 'mustard', 'giallo'],
+    rosa: ['pink', 'rose', 'rosa'],
+    viola: ['purple', 'violet', 'viola'],
+    grigio: ['grey', 'gray', 'grigio'],
+    marrone: ['brown', 'tan', 'marrone', 'beige', 'taupe'],
+    arancione: ['orange', 'arancione']
+  };
+
+  const colorScores = new Map();
+
+  function addColorScore(name, score) {
+    colorScores.set(name, (colorScores.get(name) || 0) + score);
+  }
+
+  // 1) titoli risultati
+  for (const [itColor, variants] of Object.entries(COLOR_MAP)) {
+    for (const v of variants) {
+      for (const title of uniqueTitles) {
+        if (title.toLowerCase().includes(v)) addColorScore(itColor, 15);
+      }
+      if (ocrText.includes(v)) addColorScore(itColor, 10);
+      if (labels.some(l => l.includes(v))) addColorScore(itColor, 8);
+    }
+  }
+
+  // 2) supporto da Vision dominante
+  
+  if (colorScores.size) {
+    color = [...colorScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    color = color.charAt(0).toUpperCase() + color.slice(1);
+  }
+
+  return {
+    category,
+    brand,
+    model,
+    color,
+  };
+}
 
   // 🔹 COLORE
   let color = "Non identificato";
