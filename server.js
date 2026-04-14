@@ -579,9 +579,9 @@ function extractProductInfo({
 
   // 🔹 TIPOLGIA
   let category = "Non identificata";
-  if (text.includes("shoe") || text.includes("sneaker")) category = "Scarpe";
-  if (text.includes("shirt") || text.includes("t-shirt")) category = "Maglietta";
-  if (text.includes("hoodie") || text.includes("sweatshirt")) category = "Felpa";
+  if (searchText.includes("shoe") || searchText.includes("sneaker")) category = "Scarpe";
+  if (searchText.includes("shirt") || searchText.includes("t-shirt")) category = "Maglietta";
+  if (searchText.includes("hoodie") || searchText.includes("sweatshirt")) category = "Felpa";
 
   // 🔹 MARCA (semplificato)
   let brand = "Non identificata";
