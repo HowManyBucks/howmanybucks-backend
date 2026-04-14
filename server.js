@@ -593,7 +593,7 @@ function extractProductInfo({
   ];
 
   for (const b of brands) {
-    if (text.includes(b)) {
+    if (searchText.includes(b)) {
       brand = b.toUpperCase();
       break;
     }
