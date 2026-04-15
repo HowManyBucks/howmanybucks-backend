@@ -636,11 +636,75 @@ function extractProductInfo({
   }
 
   let brand = "Non identificata";
-  if (brandScores.size) {
+
+  if (dynamicBrandCandidate) {
+    brand = dynamicBrandCandidate.toUpperCase();
+  } else if (brandScores.size) {
     const topBrand = [...brandScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
     brand = topBrand.toUpperCase();
   }
+  const brandLower = brand.toLowerCase();
 
+const modelPhraseFreq = new Map();
+
+for (const title of uniqueTitles) {
+  const lower = title.toLowerCase();
+  const words = lower
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const brandIndex = words.findIndex(w => w === brandLower);
+  if (brandIndex >= 0) {
+    const phrase = words.slice(brandIndex + 1, brandIndex + 4).join(' ').trim();
+    if (phrase && phrase.length >= 3) {
+      modelPhraseFreq.set(phrase, (modelPhraseFreq.get(phrase) || 0) + 1);
+    }
+  }
+}
+
+let dynamicModelCandidate = null;
+if (modelPhraseFreq.size) {
+  dynamicModelCandidate = [...modelPhraseFreq.entries()]
+    .sort((a, b) => b[1] - a[1])[0][0];
+}
+  // 🔷 BRAND E MODEL DA TITOLI LENS / ANNUNCI
+const titleTokenFreq = new Map();
+
+for (const title of uniqueTitles) {
+  const cleaned = title
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .map(t => t.trim())
+    .filter(Boolean)
+    .filter(t => t.length >= 2);
+
+  for (const token of cleaned) {
+    titleTokenFreq.set(token, (titleTokenFreq.get(token) || 0) + 1);
+  }
+}
+
+const sortedTitleTokens = [...titleTokenFreq.entries()]
+  .sort((a, b) => b[1] - a[1]);
+
+const genericTokens = new Set([
+  'new', 'used', 'uomo', 'donna', 'men', 'women',
+  'shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers',
+  'shirt', 't-shirt', 'tee', 'hoodie', 'felpa',
+  'red', 'black', 'white', 'blue', 'green',
+  'taglia', 'size', 'eu', 'us'
+]);
+
+let dynamicBrandCandidate = null;
+
+for (const [token, count] of sortedTitleTokens) {
+  if (count < 2) continue;
+  if (genericTokens.has(token)) continue;
+  if (/^\d+$/.test(token)) continue;
+  dynamicBrandCandidate = token;
+  break;
+}
   // 🔹 MODELLO
   let model = "Non identificato";
 
@@ -700,7 +764,9 @@ function extractProductInfo({
   }
 
   // 3) ranking modello per frequenza
-  if (modelCandidates.length) {
+  if (dynamicModelCandidate) {
+    model = dynamicModelCandidate;
+  } else if (modelCandidates.length) {
     const freq = new Map();
     for (const m of modelCandidates) {
       freq.set(m, (freq.get(m) || 0) + 1);
