@@ -766,6 +766,7 @@ if (color === "Non identificato") {
   if (labelColor) {
     color = labelColor;
   }
+}
 
 return {
   category,
@@ -773,8 +774,7 @@ return {
   model,
   color,
 };
-}
-  
+} 
 // ===== ROUTES =====
 app.get('/', (_, res) => {
   res.type('html').send(`<h1>HOWMANYBUCKS – Backend</h1>
