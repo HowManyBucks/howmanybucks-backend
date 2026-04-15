@@ -766,6 +766,13 @@ if (color === "Non identificato") {
   if (labelColor) {
     color = labelColor;
   }
+
+return {
+  category,
+  brand,
+  model,
+  color,
+};
 }
   
 // ===== ROUTES =====
