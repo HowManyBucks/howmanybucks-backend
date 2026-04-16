@@ -635,39 +635,6 @@ function extractProductInfo({
     if (count > 0) addBrandScore(brandName, count * 20);
   }
 
-  let brand = "Non identificata";
-
-  if (dynamicBrandCandidate) {
-    brand = dynamicBrandCandidate.toUpperCase();
-  } else if (brandScores.size) {
-    const topBrand = [...brandScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
-    brand = topBrand.toUpperCase();
-  }
-  const brandLower = brand.toLowerCase();
-
-const modelPhraseFreq = new Map();
-
-for (const title of uniqueTitles) {
-  const lower = title.toLowerCase();
-  const words = lower
-    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  const brandIndex = words.findIndex(w => w === brandLower);
-  if (brandIndex >= 0) {
-    const phrase = words.slice(brandIndex + 1, brandIndex + 4).join(' ').trim();
-    if (phrase && phrase.length >= 3) {
-      modelPhraseFreq.set(phrase, (modelPhraseFreq.get(phrase) || 0) + 1);
-    }
-  }
-}
-
-let dynamicModelCandidate = null;
-if (modelPhraseFreq.size) {
-  dynamicModelCandidate = [...modelPhraseFreq.entries()]
-    .sort((a, b) => b[1] - a[1])[0][0];
-}
   // 🔷 BRAND E MODEL DA TITOLI LENS / ANNUNCI
 const titleTokenFreq = new Map();
 
@@ -704,6 +671,40 @@ for (const [token, count] of sortedTitleTokens) {
   if (/^\d+$/.test(token)) continue;
   dynamicBrandCandidate = token;
   break;
+}
+  
+  let brand = "Non identificata";
+
+  if (dynamicBrandCandidate) {
+    brand = dynamicBrandCandidate.toUpperCase();
+  } else if (brandScores.size) {
+    const topBrand = [...brandScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    brand = topBrand.toUpperCase();
+  }
+  const brandLower = brand.toLowerCase();
+
+const modelPhraseFreq = new Map();
+
+for (const title of uniqueTitles) {
+  const lower = title.toLowerCase();
+  const words = lower
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const brandIndex = words.findIndex(w => w === brandLower);
+  if (brandIndex >= 0) {
+    const phrase = words.slice(brandIndex + 1, brandIndex + 4).join(' ').trim();
+    if (phrase && phrase.length >= 3) {
+      modelPhraseFreq.set(phrase, (modelPhraseFreq.get(phrase) || 0) + 1);
+    }
+  }
+}
+
+let dynamicModelCandidate = null;
+if (modelPhraseFreq.size) {
+  dynamicModelCandidate = [...modelPhraseFreq.entries()]
+    .sort((a, b) => b[1] - a[1])[0][0];
 }
   // 🔹 MODELLO
   let model = "Non identificato";
