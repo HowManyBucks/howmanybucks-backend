@@ -917,8 +917,73 @@ app.get('/', (_, res) => {
     <li>POST /search/image</li>
   </ul>`);
 });
-app.get('/health', (_, res) => res.send('OK'));
 
+app.get('/health', (_, res) => res.send('OK'));
+function normalizeTitleForMatch(title = '') {
+  return String(title)
+    .toLowerCase()
+    .replace(/[\/\-]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function extractSignalsFromTitle(title = '') {
+  const t = normalizeTitleForMatch(title);
+  const detectCategory = () => {
+    if (/(hat|cap|cappello|cappellino|beanie|snapback|visor)\b/.test(t)) return 'hat';
+    if (/(shoe|shoes|scarpa|scarpe|sneaker|sneakers|trainer|trainers)\b/.test(t)) return 'shoe';
+    if (/(hoodie|sweatshirt|felpa)\b/.test(t)) return 'hoodie';
+    if (/(shirt|t shirt|tshirt|tee|maglietta|camicia|polo)\b/.test(t)) return 'shirt';
+    if (/(jacket|coat|giacca|blazer|piumino)\b/.test(t)) return 'jacket';
+    return '';
+  };
+  const colors = [];
+  const colorMap = [
+    ['black', 'nero'], ['white', 'bianco'], ['red', 'rosso'], ['blue', 'blu'],
+    ['green', 'verde'], ['brown', 'marrone'], ['grey', 'grigio'], ['gray', 'grigio'],
+    ['beige', 'beige'], ['pink', 'rosa'], ['yellow', 'giallo'], ['orange', 'arancione'],
+    ['navy', 'blu'], ['tan', 'beige']
+  ];
+  for (const [en, it] of colorMap) {
+    if (t.includes(en) || t.includes(it)) colors.push(it);
+  }
+  return {
+    normalized: t,
+    category: detectCategory(),
+    colors: [...new Set(colors)],
+  };
+}
+function titlesMatchTop2(a, b) {
+  const A = extractSignalsFromTitle(a);
+  const B = extractSignalsFromTitle(b);
+  let score = 0;
+  if (A.category && B.category && A.category === B.category) score += 3;
+  const sharedColors = A.colors.filter(c => B.colors.includes(c));
+  if (sharedColors.length) score += 2;
+  const aWords = A.normalized.split(' ').filter(w => w.length >= 3);
+  const bWords = B.normalized.split(' ').filter(w => w.length >= 3);
+  const stop = new Set([
+    'new', 'used', 'vintage', 'uomo', 'donna', 'men', 'women',
+    'hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback',
+    'shirt', 't', 'tee', 'tshirt', 'shoe', 'scarpa', 'sneaker',
+    'black', 'white', 'red', 'blue', 'green', 'brown', 'grey', 'gray',
+    'nero', 'bianco', 'rosso', 'blu', 'verde', 'marrone', 'grigio'
+  ]);
+  const aCore = aWords.filter(w => !stop.has(w));
+  const bCore = bWords.filter(w => !stop.has(w));
+  const sharedCore = aCore.filter(w => bCore.includes(w));
+  if (sharedCore.length >= 1) score += 2;
+  if (sharedCore.length >= 2) score += 2;
+  return {
+    ok: score >= 5,
+    score,
+    sharedCore,
+    categoryA: A.category,
+    categoryB: B.category,
+    colorsA: A.colors,
+    colorsB: B.colors,
+  };
+}
 app.post('/search/image', async (req, res) => {
   try {
     console.log("SEARCH_IMAGE_HIT");
@@ -1053,6 +1118,20 @@ try {
 
   merged = dedupeByLink(combined);
   topResults = merged.slice(0, 2);
+  
+let top2Match = null;
+let anchorTitle = '';
+if (topResults.length >= 2) {
+  top2Match = titlesMatchTop2(
+    topResults[0]?.title || '',
+    topResults[1]?.title || ''
+  );
+}
+if (top2Match?.ok) {
+  anchorTitle = topResults[0]?.title || '';
+} else if (topResults.length) {
+  anchorTitle = topResults[0]?.title || ''
+}
 // === FILTRO QUALITÀ BASE ===
 
 merged = merged.filter(item => {
@@ -1204,6 +1283,9 @@ if (!merged.length) {
 if (!topResults.length) {
   topResults = merged.slice(0, 2);
 }
+const titlesForExtraction = anchorTitle
+  ? [anchorTitle]
+  : topResults.map(it => it.title || '');
     
 const productInfo = extractProductInfo({
   labelAnnotations: vision.labels,
@@ -1212,6 +1294,25 @@ const productInfo = extractProductInfo({
   candidateTitles: topResults.map(it => it.title || ''),
   visionColors: vision.colors,
 });
+const visionCategory = finalCategory || '';
+const visionColor = colorFromVision(vision.colors) || '';
+let visionValidation = {
+  categoryMatch: false,
+  colorMatch: false,
+};
+if (productInfo.category && visionCategory) {
+  const pCat = productInfo.category.toLowerCase();
+  const vCat = visionCategory.toLowerCase();
+  visionValidation.categoryMatch =
+    pCat.includes(vCat) ||
+    vCat.includes(pCat) ||
+    (pCat === 'maglietta' && (vCat === 't-shirt' || vCat === 'shirt')) ||
+    (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker'));
+}
+if (productInfo.color && visionColor) {
+  visionValidation.colorMatch =
+    productInfo.color.toLowerCase() === visionColor.toLowerCase();
+}
 console.log("PRODUCT INFO:", productInfo);
     
     // Whitelist + blacklist
