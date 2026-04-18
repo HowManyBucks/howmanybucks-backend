@@ -228,6 +228,7 @@ const CATEGORY_SYNONYMS = {
     'trainer','trainers','running shoe','basketball shoe',
     'skate shoe'
   ],
+  'hat': ['hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback', 'visor'],
 };
 const PATTERN_SYNONYMS = {
   'righe': ['righe','rigato','a righe','striped','stripes','pinstripe'],
@@ -584,7 +585,15 @@ function extractProductInfo({
   if (searchText.includes("shoe") || searchText.includes("sneaker")) category = "Scarpe";
   if (searchText.includes("shirt") || searchText.includes("t-shirt")) category = "Maglietta";
   if (searchText.includes("hoodie") || searchText.includes("sweatshirt")) category = "Felpa";
-
+  if (
+    searchText.includes("hat") ||
+    searchText.includes("cap") ||
+    searchText.includes("cappello") ||
+    searchText.includes("cappellino") ||
+    searchText.includes("beanie") ||
+    searchText.includes("snapback")
+  ) category = "Cappello";
+  
     // 🔹 TESTI NORMALIZZATI
   const tokens = searchText
     .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
@@ -1104,6 +1113,8 @@ const brandResolved = qb.brandResolved;
 // 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
 let topResults = [];
+let top2Match = null;
+let anchorTitle = '';
 let usedQuery = 'ebay_image_search';
 let dynamicHintSignals = [];
 
@@ -1119,19 +1130,17 @@ try {
   merged = dedupeByLink(combined);
   topResults = merged.slice(0, 2);
   
-let top2Match = null;
-let anchorTitle = '';
-if (topResults.length >= 2) {
-  top2Match = titlesMatchTop2(
-    topResults[0]?.title || '',
-    topResults[1]?.title || ''
-  );
-}
-if (top2Match?.ok) {
-  anchorTitle = topResults[0]?.title || '';
-} else if (topResults.length) {
-  anchorTitle = topResults[0]?.title || ''
-}
+  if (topResults.length >= 2) {
+    top2Match = titlesMatchTop2(
+      topResults[0]?.title || '',
+      topResults[1]?.title || ''
+    );
+  }
+  if (top2Match?.ok) {
+    anchorTitle = topResults[0]?.title || '';
+  } else if (topResults.length) {
+    anchorTitle = topResults[0]?.title || '';
+  }
 // === FILTRO QUALITÀ BASE ===
 
 merged = merged.filter(item => {
@@ -1308,6 +1317,7 @@ if (productInfo.category && visionCategory) {
     vCat.includes(pCat) ||
     (pCat === 'maglietta' && (vCat === 't-shirt' || vCat === 'shirt')) ||
     (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker'));
+    (pCat === 'cappello' && vCat === 'hat') ||
 }
 if (productInfo.color && visionColor) {
   visionValidation.colorMatch =
