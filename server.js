@@ -1084,10 +1084,11 @@ merged = merged.filter(item => {
 
   // SHOES
   'shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers',
-  'trainer', 'trainers', 'running shoe', 'basketball shoe', 'skate shoe'
+  'trainer', 'trainers', 'running shoe', 'basketball shoe', 'skate shoe',
   
   // HEADWEAR
-  'hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback', 'visor',
+  'hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback', 'visor'
+  
   ];
   
   const hasClothing = clothingKeywords.some(k => text.includes(k));
