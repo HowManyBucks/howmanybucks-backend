@@ -1317,7 +1317,7 @@ if (productInfo.category && visionCategory) {
     vCat.includes(pCat) ||
     (pCat === 'maglietta' && (vCat === 't-shirt' || vCat === 'shirt')) ||
     (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker'));
-    (pCat === 'cappello' && vCat === 'hat') ||
+    (pCat === 'cappello' && vCat === 'hat');
 }
 if (productInfo.color && visionColor) {
   visionValidation.colorMatch =
