@@ -1042,6 +1042,7 @@ try {
   ];
 
   merged = dedupeByLink(combined);
+  const topResults = merged.slice(0, 2);
 // === FILTRO QUALITÀ BASE ===
 
 merged = merged.filter(item => {
@@ -1190,7 +1191,7 @@ const productInfo = extractProductInfo({
   labelAnnotations: vision.labels,
   logoAnnotations: vision.logos,
   text: vision.text,
-  candidateTitles: merged.map(it => it.title || ''),
+  candidateTitles: topResult.map(it => it.title || ''),
   visionColors: vision.colors,
 });
 console.log("PRODUCT INFO:", productInfo);
