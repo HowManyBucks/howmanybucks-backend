@@ -45,7 +45,7 @@ function saveTempImageAndGetUrl(req, imageBase64) {
 }
 const APPAREL_EXCLUDED_TERMS = [
   'case', 'cover', 'phone', 'charger', 'cable', 'lace', 'laces',
-  'sock', 'socks', 'hat', 'cap', 'belt', 'keychain', 'sticker',
+  'sock', 'socks', 'belt', 'keychain', 'sticker',
   'watch', 'strap', 'bag', 'wallet', 'perfume'
 ];
 function isExcludedApparelResult(text = '') {
@@ -70,6 +70,7 @@ const map = {
       'shoe', 'shoes', 'sneaker', 'sneakers', 'trainer', 'trainers',
       'running shoe', 'basketball shoe', 'skate shoe', 'scarpa', 'scarpe'
     ],
+    'hat': ['hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback'],
     'sneaker': [
       'shoe', 'shoes', 'sneaker', 'sneakers', 'trainer', 'trainers',
       'running shoe', 'basketball shoe', 'skate shoe', 'scarpa', 'scarpe'
@@ -979,6 +980,14 @@ if (visionSignals.some(l => l.includes('jeans') || l.includes('denim'))) {
   detectedCategory = 'jeans';
 }
 if (visionSignals.some(l =>
+  l.includes('hat') ||
+  l.includes('cap') ||
+  l.includes('cappello') ||
+  l.includes('headwear')
+)) {
+  detectedCategory = 'hat';
+}
+if (visionSignals.some(l =>
   l.includes('shoe') ||
   l.includes('shoes') ||
   l.includes('sneaker') ||
@@ -1076,6 +1085,9 @@ merged = merged.filter(item => {
   // SHOES
   'shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers',
   'trainer', 'trainers', 'running shoe', 'basketball shoe', 'skate shoe'
+  
+  // HEADWEAR
+  'hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback', 'visor',
   ];
   
   const hasClothing = clothingKeywords.some(k => text.includes(k));
