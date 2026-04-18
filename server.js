@@ -1029,6 +1029,7 @@ const brandResolved = qb.brandResolved;
 
 // 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
+let topResults = [];
 let usedQuery = 'ebay_image_search';
 let dynamicHintSignals = [];
 
@@ -1042,7 +1043,7 @@ try {
   ];
 
   merged = dedupeByLink(combined);
-  const topResults = merged.slice(0, 2);
+  topResults = merged.slice(0, 2);
 // === FILTRO QUALITÀ BASE ===
 
 merged = merged.filter(item => {
@@ -1187,11 +1188,15 @@ if (!merged.length) {
     usedQuery = q;
   }
  }
+if (!topResults.length) {
+  topResults = merged.slice(0, 2);
+}
+    
 const productInfo = extractProductInfo({
   labelAnnotations: vision.labels,
   logoAnnotations: vision.logos,
   text: vision.text,
-  candidateTitles: topResult.map(it => it.title || ''),
+  candidateTitles: topResults.map(it => it.title || ''),
   visionColors: vision.colors,
 });
 console.log("PRODUCT INFO:", productInfo);
