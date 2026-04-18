@@ -681,7 +681,54 @@ for (const [token, count] of sortedTitleTokens) {
     const topBrand = [...brandScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
     brand = topBrand.toUpperCase();
   }
-  const brandLower = brand.toLowerCase();
+  
+// 🔷 BRAND CLEAN — ricostruzione multi-parola dai titoli
+if (brand !== "Non identificata") {
+  const comboFreq = new Map();
+ 
+  for (const title of uniqueTitles) {
+    const words = title
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s\/\-]/gu, ' ')
+      .replace(/[\/\-]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+  
+    const brandLower = brand.toLowerCase();
+    const idx = words.findIndex(w => w === brandLower);
+   
+    if (idx >= 0 && words[idx + 1]) {
+      const combo2 = `${words[idx]} ${words[idx + 1]}`.trim();
+      comboFreq.set(combo2, (comboFreq.get(combo2) || 0) + 1);
+     
+      if (words[idx + 2]) {
+        const combo3 = `${words[idx]} ${words[idx + 1]} ${words[idx + 2]}`.trim();
+        comboFreq.set(combo3, (comboFreq.get(combo3) || 0) + 1);
+      }
+    }
+  }
+  if (comboFreq.size) {
+    const bestCombo = [...comboFreq.entries()]
+      .sort((a, b) => b[1] - a[1])[0][0];
+   
+    const comboWords = bestCombo.split(' ');
+    
+    const badSecondWord = new Set([
+      'shirt', 't', 'tee', 'hoodie', 'felpa', 'shoe', 'scarpa',
+      'red', 'black', 'white', 'blue', 'green', 'brown',
+      'new', 'used', 'vintage'
+    ]);
+    
+    if (
+      comboWords.length >= 2 &&
+      !badSecondWord.has(comboWords[1])
+    ) {
+      brand = bestCombo.toUpperCase();
+    }
+  }
+}
+  
+const brandLower = brand.toLowerCase();
 
 const modelPhraseFreq = new Map();
 
@@ -765,15 +812,34 @@ if (modelPhraseFreq.size) {
   }
 
   // 3) ranking modello per frequenza
-  if (dynamicModelCandidate) {
-    model = dynamicModelCandidate;
-  } else if (modelCandidates.length) {
-    const freq = new Map();
-    for (const m of modelCandidates) {
-      freq.set(m, (freq.get(m) || 0) + 1);
-    }
-    model = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+ if (dynamicModelCandidate) {
+  model = dynamicModelCandidate;
+} else if (modelCandidates.length) {
+  const freq = new Map();
+  for (const m of modelCandidates) {
+    freq.set(m, (freq.get(m) || 0) + 1);
   }
+  model = [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
+// pulizia finale modello
+if (brand !== "Non identificata" && model !== "Non identificato") {
+  const brandWords = brand.toLowerCase().split(' ');
+  const modelWords = model.toLowerCase().split(' ').filter(Boolean);
+
+  const cleanedModelWords = modelWords.filter(w => !brandWords.includes(w));
+
+  const modelStopWords = new Set([
+    'shirt', 't', 'tee', 'tshirt', 't-shirt', 'maglietta',
+    'hoodie', 'felpa', 'shoe', 'scarpa', 'sneaker',
+    'red', 'black', 'white', 'blue', 'green', 'brown',
+    'new', 'used', 'vintage'
+  ]);
+
+  const finalModelWords = cleanedModelWords.filter(w => !modelStopWords.has(w));
+
+  model = finalModelWords.length ? finalModelWords.join(' ') : 'Non identificato';
+}
 
 // 🔷 COLORE (VISION FIRST + SOGLIA 33,01%)
 let color = "Non identificato";
