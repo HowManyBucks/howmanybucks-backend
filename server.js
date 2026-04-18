@@ -1316,7 +1316,7 @@ if (productInfo.category && visionCategory) {
     pCat.includes(vCat) ||
     vCat.includes(pCat) ||
     (pCat === 'maglietta' && (vCat === 't-shirt' || vCat === 'shirt')) ||
-    (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker'));
+    (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker')) ||
     (pCat === 'cappello' && vCat === 'hat');
 }
 if (productInfo.color && visionColor) {
@@ -1625,6 +1625,8 @@ if (query.toLowerCase().includes("hoodie")) category = "hoodie";
 if (query.toLowerCase().includes("jacket")) category = "jacket";
 if (query.toLowerCase().includes("jeans")) category = "jeans";
 if (query.toLowerCase().includes("polo")) category = "polo";
+if (query.toLowerCase().includes("hat")) category = "hat";
+if (query.toLowerCase().includes("cap")) category = "hat";
 
 const items = (data.itemSummaries || [])
   .filter(item => !isExcludedApparelResult(item.title))
