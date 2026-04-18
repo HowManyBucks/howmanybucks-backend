@@ -644,7 +644,15 @@ function extractProductInfo({
     }
     if (count > 0) addBrandScore(brandName, count * 20);
   }
+  const topTitles = uniqueTitles.slice(0, 2);
 
+  for (const brandName of BRAND_DICTIONARY) {
+    let topCount = 0;
+    for (const title of topTitles) {
+      if (title.toLowerCase().includes(brandName)) topCount++;
+    }
+    if (topCount > 0) addBrandScore(brandName, topCount * 40);
+  }
   // 🔷 BRAND E MODEL DA TITOLI LENS / ANNUNCI
 const titleTokenFreq = new Map();
 
@@ -669,7 +677,9 @@ const genericTokens = new Set([
   'new', 'used', 'uomo', 'donna', 'men', 'women',
   'shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers',
   'shirt', 't-shirt', 'tee', 'hoodie', 'felpa',
-  'red', 'black', 'white', 'blue', 'green',
+  'red', 'black', 'white', 'blue', 'green', 'brown', 'beige',
+  'natural', 'color', 'straw', 'woven', 'baseball',
+  'hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback',
   'taglia', 'size', 'eu', 'us'
 ]);
 
@@ -685,10 +695,9 @@ for (const [token, count] of sortedTitleTokens) {
   
   let brand = "Non identificata";
 
-  if (dynamicBrandCandidate) {
-    brand = dynamicBrandCandidate.toUpperCase();
-  } else if (brandScores.size) {
-    const topBrand = [...brandScores.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  if (brandScores.size) {
+    const topBrand = [...brandScores.entries()]
+      .sort((a, b) => b[1] - a[1])[0][0];
     brand = topBrand.toUpperCase();
   }
   
@@ -1310,15 +1319,15 @@ let visionValidation = {
   colorMatch: false,
 };
 if (productInfo.category && visionCategory) {
-  const pCat = productInfo.category.toLowerCase();
-  const vCat = visionCategory.toLowerCase();
-  visionValidation.categoryMatch =
+   const pCat = productInfo.category.toLowerCase();
+   const vCat = visionCategory.toLowerCase();
+   visionValidation.categoryMatch =
     pCat.includes(vCat) ||
     vCat.includes(pCat) ||
     (pCat === 'maglietta' && (vCat === 't-shirt' || vCat === 'shirt')) ||
     (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker')) ||
     (pCat === 'cappello' && vCat === 'hat');
-}
+ }
 if (productInfo.color && visionColor) {
   visionValidation.colorMatch =
     productInfo.color.toLowerCase() === visionColor.toLowerCase();
