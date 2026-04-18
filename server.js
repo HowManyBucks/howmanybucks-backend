@@ -1291,7 +1291,7 @@ const productInfo = extractProductInfo({
   labelAnnotations: vision.labels,
   logoAnnotations: vision.logos,
   text: vision.text,
-  candidateTitles: topResults.map(it => it.title || ''),
+  candidateTitles: titlesForExtraction,
   visionColors: vision.colors,
 });
 const visionCategory = finalCategory || '';
@@ -1449,6 +1449,12 @@ const suggested = humanRound(sellableBase);
       success: true,
       geo: { hl, gl, countryUsed: country || ENV.PRICE_COUNTRY, continentUsed: continent || null, sitesQueried: siteList.slice(0, TOP_SITES) },
       brandResolved,
+      top2Debug: {
+        titles: topResults.map(it => it.title || ''),
+        match: top2Match,
+        anchorTitle
+      },
+      visionValidation,
       category: productInfo.category,
       brand: productInfo.brand,
       model: productInfo.model,
