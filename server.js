@@ -198,6 +198,79 @@ function domainOf(urlStr) {
   }
 }
 
+// ===== GEMINI ANALYZE =====
+
+async function analyzeItemWithGemini(imageBase64) {
+  try {
+    const cleanBase64 = stripBase64Prefix(imageBase64);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': process.env.GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `
+Analizza questa immagine di un capo di abbigliamento.
+Rispondi SOLO in JSON valido senza testo extra.
+Formato:
+{
+  "brand": "...",
+  "model": "...",
+  "category": "...",
+  "color": "..."
+}
+Regole:
+- Se non sei sicuro, scrivi "Non identificato"
+- Non aggiungere spiegazioni
+- Non aggiungere testo fuori dal JSON
+                  `
+                },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: cleanBase64
+                  }
+                }
+              ]
+            }
+          ]
+        })
+      }
+    );
+    const data = await response.json();
+    const rawText =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('GEMINI RAW:', rawText);
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      parsed = {
+        brand: "Non identificato",
+        model: "Non identificato",
+        category: "Non identificato",
+        color: "Non identificato"
+      };
+    }
+    return parsed;
+  } catch (err) {
+    console.error('GEMINI ERROR:', err.message);
+    return {
+      brand: "Non identificato",
+      model: "Non identificato",
+      category: "Non identificato",
+      color: "Non identificato"
+    };
+  }
+}
+
 // ===== LEXICON =====
 const STOPWORDS = new Set([
   'textile','fabric','clothing','apparel','garment','sleeve','long','short','active','sports','sport','athletic',
@@ -990,6 +1063,30 @@ app.get('/', (_, res) => {
 });
 
 app.get('/health', (_, res) => res.send('OK'));
+
+app.post('/analyze-item', async (req, res) => {
+  try {
+    const { imageBase64 } = req.body || {};
+    if (!imageBase64) {
+      return res.status(400).json({
+        success: false,
+        error: 'imageBase64 mancante'
+      });
+    }
+    const analysis = await analyzeItemWithGemini(imageBase64);
+    console.log('GEMINI ANALYSIS:', analysis);
+    return res.json({
+      success: true,
+      analysis
+    });
+  } catch (err) {
+    console.error('ANALYZE ITEM ERROR:', err.message);
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
 
 app.post('/analyze-item', async (req, res) => {
   try {
