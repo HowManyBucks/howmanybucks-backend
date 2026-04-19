@@ -243,9 +243,17 @@ async function analyzeItemWithGemini(imageBase64) {
       }
     );
     const data = await response.json();
-    console.log('GEMINI FULL RESPONSE:', JSON.stringify(data));
-    const rawText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    console.log('GEMINI FULL RESPONSE:', JSON.stringify(data));  
+    
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    
+    const rawText = parts
+      .map(p => p.text || '')
+      .join(' ')
+      .trim();
+   
+    console.log('GEMINI RAW FULL:', rawText);
     console.log('GEMINI RAW:', rawText);
     console.log('RAW LENGTH:', rawText.length);
     console.log('GEMINI CLEANED:', cleaned);
