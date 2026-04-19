@@ -258,29 +258,32 @@ async function analyzeItemWithGemini(imageBase64) {
     console.log('RAW LENGTH:', rawText.length);
     console.log('GEMINI CLEANED:', cleaned);
     
-    let parsed;  
-    try {
-      const cleaned = rawText
-        .replace(/```json/gi, '')
-        .replace(/```/g, '')
-        .trim()
-      
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found');
-      }
-    } catch (e) {
-      console.warn('GEMINI PARSE FALLBACK:', rawText);
- 
-      parsed = {
-        brand: "Non identificato",
-        model: "Non identificato",
-        category: "Non identificato",
-        color: "Non identificato"
-      };
-    }
+let parsed;
+
+try {
+  const cleaned = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+  
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  
+  if (!jsonMatch) {
+    throw new Error('No JSON found');
+  }
+  
+  parsed = JSON.parse(jsonMatch[0]);
+  
+} catch (e) {
+  console.warn('GEMINI PARSE FALLBACK:', rawText);
+  
+  parsed = {
+    brand: "Non identificato",
+    model: "Non identificato",
+    category: "Non identificato",
+    color: "Non identificato"
+  };
+}
     try {
       parsed = JSON.parse(rawText);
     } catch {
