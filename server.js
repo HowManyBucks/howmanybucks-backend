@@ -250,16 +250,14 @@ async function analyzeItemWithGemini(imageBase64) {
     console.log('RAW LENGTH:', rawText.length);
     console.log('GEMINI CLEANED:', cleaned);
     
-    let parsed;
-  
+    let parsed;  
     try {
       const cleaned = rawText
-        .replace(/```json/g, '')
+        .replace(/```json/gi, '')
         .replace(/```/g, '')
-        .trim();
+        .trim()
       
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]);
       } else {
