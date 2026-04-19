@@ -247,36 +247,32 @@ async function analyzeItemWithGemini(imageBase64) {
     console.log('GEMINI FULL RESPONSE:', JSON.stringify(data));  
     
     const parts = data?.candidates?.[0]?.content?.parts || [];
-    
+  
     const rawText = parts
       .map(p => p.text || '')
       .join(' ')
       .trim();
-   
-    console.log('GEMINI RAW FULL:', rawText);
-    console.log('GEMINI RAW:', rawText);
-    console.log('RAW LENGTH:', rawText.length);
-    console.log('GEMINI CLEANED:', cleaned);
+  
+console.log('GEMINI RAW FULL:', rawText);
+console.log('GEMINI RAW:', rawText);
+console.log('RAW LENGTH:', rawText.length);
     
 let parsed;
-
+    
 try {
   const cleaned = rawText
     .replace(/```json/gi, '')
     .replace(/```/g, '')
     .trim();
-  
+
+  console.log('GEMINI CLEANED:', cleaned);
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-  
   if (!jsonMatch) {
     throw new Error('No JSON found');
   }
-  
   parsed = JSON.parse(jsonMatch[0]);
-  
 } catch (e) {
   console.warn('GEMINI PARSE FALLBACK:', rawText);
-  
   parsed = {
     brand: "Non identificato",
     model: "Non identificato",
@@ -284,18 +280,9 @@ try {
     color: "Non identificato"
   };
 }
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      parsed = {
-        brand: "Non identificato",
-        model: "Non identificato",
-        category: "Non identificato",
-        color: "Non identificato"
-      };
-    }
-    return parsed;
-  } catch (err) {
+
+return parsed;
+} catch (err) {
     console.error('GEMINI ERROR:', err.message);
     return {
       brand: "Non identificato",
