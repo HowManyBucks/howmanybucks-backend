@@ -263,16 +263,16 @@ async function analyzeItemWithGemini(imageBase64) {
       } else {
         throw new Error('No JSON found');
       }
-} catch (e) {
-  console.warn('GEMINI PARSE FALLBACK:', rawText);
+    } catch (e) {
+      console.warn('GEMINI PARSE FALLBACK:', rawText);
  
-  parsed = {
-    brand: "Non identificato",
-    model: "Non identificato",
-    category: "Non identificato",
-    color: "Non identificato"
-  };
-}
+      parsed = {
+        brand: "Non identificato",
+        model: "Non identificato",
+        category: "Non identificato",
+        color: "Non identificato"
+      };
+    }
     try {
       parsed = JSON.parse(rawText);
     } catch {
