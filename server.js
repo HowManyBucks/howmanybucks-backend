@@ -1206,6 +1206,14 @@ console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
+const geminiAnalysis = await analyzeItemWithGemini(imageBase64);
+    
+console.log('SEARCH IMAGE - GEMINI ANALYSIS:', geminiAnalysis);
+    
+const aiBrand = String(geminiAnalysis?.brand || '').trim();
+const aiModel = String(geminiAnalysis?.model || '').trim();
+const aiCategory = String(geminiAnalysis?.category || '').trim();
+const aiColor = String(geminiAnalysis?.color || '').trim();
 const tempImage = saveTempImageAndGetUrl(req, imageBase64);
 const tempImageUrl = tempImage.publicUrl;
 
@@ -1300,9 +1308,57 @@ console.log("VISION LABELS:", labels);
     const TOP_SITES = Math.min(siteList.length, 6);
 
    // Query
-const qb = buildCandidateQueries({ brand, model, category, pattern, gender, color }, vision);
+    
+const finalBrand =
+  brand && brand.trim() ? brand.trim() :
+  (aiBrand && aiBrand !== 'Non identificato' ? aiBrand.trim() : '');
+    
+const finalModel =
+  model && model.trim() ? model.trim() :
+  (aiModel && aiModel !== 'Non identificato' ? aiModel.trim() : '');
+    
+const finalCategoryFromAI = (() => {
+  const c = (aiCategory || '').toLowerCase();
+  if (!c || c === 'non identificato') return '';
+  if (c.includes('t-shirt') || c.includes('shirt')) return 't-shirt';
+  if (c.includes('hoodie') || c.includes('felpa') || c.includes('sweatshirt')) return 'hoodie';
+  if (c.includes('jacket') || c.includes('giacca') || c.includes('coat')) return 'jacket';
+  if (c.includes('jeans') || c.includes('denim')) return 'jeans';
+  if (c.includes('shoe') || c.includes('scarpa') || c.includes('sneaker')) return 'shoe';
+  if (c.includes('hat') || c.includes('cap') || c.includes('cappello')) return 'hat';
+  return '';
+})();
+    
+const finalColor =
+  color && color.trim() ? color.trim() :
+  (aiColor && aiColor !== 'Non identificato' ? aiColor.trim() : '');
+    
+const queryCategory = category && category.trim()
+  ? category.trim()
+  : (finalCategoryFromAI || '');
+    
+const qb = buildCandidateQueries(
+  {
+    brand: finalBrand,
+    model: finalModel,
+    category: queryCategory,
+    pattern,
+    gender,
+    color: finalColor
+  },
+  vision
+);
+    
 const queries = qb.queries;
 const brandResolved = qb.brandResolved;
+
+console.log('QUERY INPUTS FINAL:', {
+  finalBrand,
+  finalModel,
+  queryCategory,
+  finalColor
+});
+console.log('QUERIES BUILT:', queries);
 
 // 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
