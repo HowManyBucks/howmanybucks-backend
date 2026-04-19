@@ -1193,14 +1193,33 @@ console.log("IMAGE LENGTH:", imageBase64 ? imageBase64.length : "NULL");
     if (!imageBase64) {
       return res.status(400).json({ success: false, error: 'imageBase64 mancante' });
     }
+
 const geminiAnalysis = await analyzeItemWithGemini(imageBase64);
-    
 console.log('SEARCH IMAGE - GEMINI ANALYSIS:', geminiAnalysis);
+
+const cleanAiValue = (v) => {
+  const s = String(v || '').trim();
+  if (!s) return '';
+  const low = s.toLowerCase();
+  if (
+    low === 'non identificato' ||
+    low === 'non identificata' ||
+    low === 'n/a' ||
+    low === 'na' ||
+    low === 'null' ||
+    low === 'undefined' ||
+    low === 'unknown'
+  ) {
+    return '';
+  }
+  return s;
+};
+
+const aiBrand = cleanAiValue(geminiAnalysis?.brand);
+const aiModel = cleanAiValue(geminiAnalysis?.model);
+const aiCategory = cleanAiValue(geminiAnalysis?.category);
+const aiColor = cleanAiValue(geminiAnalysis?.color);
     
-const aiBrand = String(geminiAnalysis?.brand || '').trim();
-const aiModel = String(geminiAnalysis?.model || '').trim();
-const aiCategory = String(geminiAnalysis?.category || '').trim();
-const aiColor = String(geminiAnalysis?.color || '').trim();
 const tempImage = saveTempImageAndGetUrl(req, imageBase64);
 const tempImageUrl = tempImage.publicUrl;
 
