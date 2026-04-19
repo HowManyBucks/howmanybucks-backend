@@ -462,10 +462,7 @@ function buildCandidateQueries(form, vision) {
 
   if (!Q.length) Q.push('t-shirt');
   const queries = uniq(Q).filter(q => q.split(' ').length >= 1);
-  const rawBrandResolved = formBrand || logoBrand || '';
-  const brandResolved = rawBrandResolved
-    ? rawBrandResolved.replace(/-/g, ' ').trim()
-    : '';
+  const brandResolved = formBrand || logoBrand || '';
   return { queries, brandResolved };
 }
 
