@@ -567,6 +567,54 @@ const isBlacklisted = (host) => {
 };
 
 // 🔵 FUNZIONE ESTRAZIONE INFO PRODOTTO
+
+function extractBrandClusterFromTitles(candidateTitles = []) {
+  const BRAND_DICTIONARY = [
+    'nike', 'adidas', 'puma', 'reebok', 'new balance', 'asics', 'converse', 'vans',
+    'under armour', 'the north face', 'north face', 'patagonia', 'superdry',
+    'harley davidson', 'levi\'s', 'levis', 'diesel', 'fila', 'kappa', 'lacoste',
+    'ralph lauren', 'polo ralph lauren', 'tommy hilfiger', 'calvin klein',
+    'zara', 'h&m', 'hm', 'uniqlo', 'gucci', 'prada', 'armani', 'emporio armani',
+    'giorgio armani', 'dolce & gabbana', 'd&g', 'balenciaga', 'louis vuitton',
+    'valentino', 'fendi', 'burberry', 'moncler', 'off-white', 'stone island',
+    'borsalino'
+  ];
+  
+  const counts = new Map();
+ 
+  for (const rawTitle of candidateTitles) {
+    const title = String(rawTitle || '').toLowerCase();
+  
+    for (const brand of BRAND_DICTIONARY) {
+      if (title.includes(brand)) {
+        counts.set(brand, (counts.get(brand) || 0) + 1);
+      }
+    }
+  }
+ 
+  const ranked = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  
+  if (!ranked.length) {
+    return {
+      brand: 'Non identificata',
+      matches: [],
+    };
+  }
+
+  const [topBrand, topCount] = ranked[0];
+  
+  if (topCount < 2) {
+    return {
+      brand: 'Non identificata',
+      matches: ranked,
+    };
+  }
+  return {
+    brand: topBrand.toUpperCase(),
+    matches: ranked,
+  };
+}
+
 function extractProductInfo({
   labelAnnotations = [],
   logoAnnotations = [],
@@ -604,7 +652,9 @@ function extractProductInfo({
   const uniqueTitles = candidateTitles
     .map(t => String(t || '').trim())
     .filter(Boolean);
-
+  
+  const brandCluster = extractBrandClusterFromTitles(uniqueTitles);
+  
   // 🔹 BRAND CANDIDATES
   const BRAND_DICTIONARY = [
     'nike', 'adidas', 'puma', 'reebok', 'new balance', 'asics', 'converse', 'vans',
@@ -694,8 +744,9 @@ for (const [token, count] of sortedTitleTokens) {
 }
   
   let brand = "Non identificata";
-
-  if (brandScores.size) {
+  if (brandCluster.brand !== "Non identificata") {
+    brand = brandCluster.brand;
+  } else if (brandScores.size) {
     const topBrand = [...brandScores.entries()]
       .sort((a, b) => b[1] - a[1])[0][0];
     brand = topBrand.toUpperCase();
@@ -919,6 +970,8 @@ if (color === "Non identificato") {
     color = labelColor;
   }
 }
+
+console.log('BRAND CLUSTER:', brandCluster);
 
 return {
   category,
