@@ -990,6 +990,33 @@ app.get('/', (_, res) => {
 });
 
 app.get('/health', (_, res) => res.send('OK'));
+
+app.post('/analyze-item', async (req, res) => {
+  try {
+    const { imageBase64 } = req.body || {};
+    if (!imageBase64) {
+      return res.status(400).json({
+        success: false,
+        error: 'imageBase64 mancante'
+      });
+    }
+    
+    console.log('ANALYZE_ITEM_HIT');
+    
+    return res.json({
+      success: true,
+      message: 'Route /analyze-item creata correttamente',
+      receivedImage: !!imageBase64
+    });
+  } catch (err) {
+    console.error('ANALYZE_ITEM_ERROR:', err.message);
+    return res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
 function normalizeTitleForMatch(title = '') {
   return String(title)
     .toLowerCase()
