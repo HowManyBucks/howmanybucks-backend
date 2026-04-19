@@ -203,6 +203,7 @@ function domainOf(urlStr) {
 async function analyzeItemWithGemini(imageBase64) {
   try {
     const cleanBase64 = stripBase64Prefix(imageBase64);
+    console.log('BASE64 LENGTH:', cleanBase64.length);
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
       {
@@ -214,40 +215,39 @@ async function analyzeItemWithGemini(imageBase64) {
         body: JSON.stringify({
           contents: [
             {
+              role: "user",
               parts: [
                 {
-                  text: `
-Analizza questa immagine di un capo di abbigliamento.
-Rispondi SOLO in JSON valido senza testo extra.
-Formato:
-{
-  "brand": "...",
-  "model": "...",
-  "category": "...",
-  "color": "..."
-}
-Regole:
-- Se non sei sicuro, scrivi "Non identificato"
-- Non aggiungere spiegazioni
-- Non aggiungere testo fuori dal JSON
-                  `
-                },
-                {
-                  inline_data: {
-                    mime_type: "image/jpeg",
-                    data: cleanBase64
+                  text: `Analizza questa immagine di un capo di abbigliamento.
+        Rispondi SOLO in JSON valido senza testo extra.
+        Formato:
+        {
+          "brand": "...",
+          "model": "...",
+          "category": "...",
+          "color": "..."
+        }`
+                  },
+                  {
+                    inline_data: {
+                      mime_type: "image/jpeg",
+                      data: cleanBase64
                   }
                 }
               ]
             }
           ]
         })
+        
+      
       }
     );
     const data = await response.json();
+    console.log('GEMINI FULL RESPONSE:', JSON.stringify(data));
     const rawText =
       data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log('GEMINI RAW:', rawText);
+    console.log('RAW LENGTH:', rawText.length);
     console.log('GEMINI CLEANED:', cleaned);
     
     let parsed;
