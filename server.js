@@ -248,7 +248,33 @@ Regole:
     const rawText =
       data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log('GEMINI RAW:', rawText);
+    console.log('GEMINI CLEANED:', cleaned);
+    
     let parsed;
+  
+    try {
+      const cleaned = rawText
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+      
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('No JSON found');
+      }
+} catch (e) {
+  console.warn('GEMINI PARSE FALLBACK:', rawText);
+ 
+  parsed = {
+    brand: "Non identificato",
+    model: "Non identificato",
+    category: "Non identificato",
+    color: "Non identificato"
+  };
+}
     try {
       parsed = JSON.parse(rawText);
     } catch {
