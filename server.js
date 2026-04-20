@@ -208,11 +208,21 @@ function domainOf(urlStr) {
 }
 
 // ===== GEMINI ANALYZE =====
-
 async function analyzeItemWithGemini(imageBase64) {
   try {
-    const cleanBase64 = stripBase64Prefix(imageBase64);
+    const originalBase64 = String(imageBase64 || '');
+    const cleanBase64 = stripBase64Prefix(originalBase64);
+    
+    const detectedMimeType =
+      originalBase64.startsWith('data:image/png;base64,') ? 'image/png' :
+      originalBase64.startsWith('data:image/webp;base64,') ? 'image/webp' :
+      originalBase64.startsWith('data:image/jpeg;base64,') ? 'image/jpeg' :
+      originalBase64.startsWith('data:image/jpg;base64,') ? 'image/jpeg' :
+      'image/jpeg';
+    
     console.log('BASE64 LENGTH:', cleanBase64.length);
+    console.log('GEMINI MIME TYPE:', detectedMimeType);
+    
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
       {
@@ -228,27 +238,25 @@ async function analyzeItemWithGemini(imageBase64) {
               parts: [
                 {
                   text: `Analizza questa immagine di un capo di abbigliamento.
-        Rispondi SOLO in JSON valido senza testo extra.
-        Formato:
-        {
-          "brand": "...",
-          "model": "...",
-          "category": "...",
-          "color": "..."
-        }`
-                  },
-                  {
-                    inline_data: {
-                      mime_type: detectedMimeType,
-                      data: cleanBase64
+Rispondi SOLO in JSON valido senza testo extra.
+Formato:
+{
+  "brand": "...",
+  "model": "...",
+  "category": "...",
+  "color": "..."
+}`
+                },
+                {
+                  inline_data: {
+                    mime_type: detectedMimeType,
+                    data: cleanBase64
                   }
                 }
               ]
             }
           ]
         })
-        
-      
       }
     );
     const data = await response.json();
