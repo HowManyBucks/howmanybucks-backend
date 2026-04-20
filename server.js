@@ -1758,10 +1758,10 @@ const suggested = humanRound(sellableBase);
         anchorTitle
       },
       visionValidation,
-      category: productInfo.category,
-      brand: productInfo.brand,
-      model: productInfo.model,
-      color: productInfo.color,
+      category: finalCategory || productInfo.category,
+      brand: finalBrand || productInfo.brand,
+      model: finalModel || productInfo.model,
+      color: finalColor || productInfo.color,
       queryUsed: usedQuery,
       queriesTried: queries.slice(0, 8),
       visionPreview: {
