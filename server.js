@@ -1688,11 +1688,6 @@ console.log('RAW PRICES COUNT:', rawPrices.length);
 console.log('MEDIAN RAW:', medianRaw);
 console.log('AFTER PRICE FILTER:', prices.length);
 console.log('SELLABLE BASE:', percentile(prices, 0.25));
-console.log('PRICE SOURCE TITLES:', priceSource.map(it => ({
-  title: it.title,
-  price: it.price_str,
-  source: it.source
-})));
     
 const { baseMedian, mode, newRatio } = applyConditionHeuristic(
   prices,
