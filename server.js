@@ -21,6 +21,15 @@ function stripBase64Prefix(imageBase64 = '') {
 }
 function saveTempImageAndGetUrl(req, imageBase64) {
   const cleanBase64 = stripBase64Prefix(imageBase64);
+  const originalBase64 = String(imageBase64 || '');
+  const detectedMimeType =
+    originalBase64.startsWith('data:image/png;base64,') ? 'image/png' :
+    originalBase64.startsWith('data:image/webp;base64,') ? 'image/webp' :
+    originalBase64.startsWith('data:image/jpeg;base64,') ? 'image/jpeg' :
+    originalBase64.startsWith('data:image/jpg;base64,') ? 'image/jpeg' :
+    'image/jpeg';
+  console.log('GEMINI MIME TYPE:', detectedMimeType);
+  
   const fileName = `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.jpg`;
   const filePath = `${TMP_IMAGE_DIR}/${fileName}`;
   fs.writeFileSync(filePath, Buffer.from(cleanBase64, 'base64'));
@@ -230,7 +239,7 @@ async function analyzeItemWithGemini(imageBase64) {
                   },
                   {
                     inline_data: {
-                      mime_type: "image/jpeg",
+                      mime_type: detectedMimeType,
                       data: cleanBase64
                   }
                 }
