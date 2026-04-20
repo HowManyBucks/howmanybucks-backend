@@ -1350,8 +1350,10 @@ console.log("VISION LABELS:", labels);
    // Query
     
 const finalBrand =
-  brand && brand.trim() ? brand.trim() :
-  (aiBrand && aiBrand !== 'Non identificato' ? aiBrand.trim() : '');
+   (brand && brand.trim()) ||
+  (aiBrand && aiBrand !== 'Non identificato' && aiBrand.trim()) ||
+  (analysis.brandResolved && analysis.brandResolved.trim()) ||
+  '';
     
 const finalModel =
   model && model.trim() ? model.trim() :
@@ -1370,12 +1372,14 @@ const finalCategoryFromAI = (() => {
 })();
     
 const finalColor =
-  color && color.trim() ? color.trim() :
-  (aiColor && aiColor !== 'Non identificato' ? aiColor.trim() : '');
+  (color && color.trim()) ||
+  (aiColor && aiColor !== 'Non identificato' && aiColor.trim()) ||
+  (analysis.visionPreview?.colorGuess || '');
     
-const queryCategory = category && category.trim()
-  ? category.trim()
-  : (finalCategoryFromAI || '');
+const queryCategory =
+  (category && category.trim()) ||
+  (aiCategory && aiCategory !== 'Non identificato' && aiCategory.trim()) ||
+  '';
     
 const qb = buildCandidateQueries(
   {
