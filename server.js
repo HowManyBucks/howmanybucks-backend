@@ -1067,7 +1067,41 @@ if (color === "Non identificato") {
 }
 
 console.log('BRAND CLUSTER:', brandCluster);
-
+const knownBrandWords = new Set([
+  'nike', 'adidas', 'puma', 'reebok', 'new', 'balance', 'asics', 'converse',
+  'vans', 'under', 'armour', 'patagonia', 'superdry', 'harley', 'davidson',
+  'levis', 'levi', 'diesel', 'fila', 'kappa', 'lacoste', 'ralph', 'lauren',
+  'tommy', 'hilfiger', 'calvin', 'klein', 'zara', 'hm', 'uniqlo', 'gucci',
+  'prada', 'armani', 'emporio', 'giorgio', 'dolce', 'gabbana', 'balenciaga',
+  'louis', 'vuitton', 'valentino', 'fendi', 'burberry', 'moncler',
+  'off', 'white', 'stone', 'island'
+]);
+  
+if (brand !== "Non identificata" && model !== "Non identificato") {
+  const brandWords = brand
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  
+  const modelWords = model
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+  
+  const extraBrandWords = brandWords.filter(w => !knownBrandWords.has(w));
+  
+  if (extraBrandWords.length) {
+    const cleanedBrandWords = brandWords.filter(w => knownBrandWords.has(w));
+    const rebuiltModelWords = [...extraBrandWords, ...modelWords];
+    
+    if (cleanedBrandWords.length) {
+      brand = cleanedBrandWords.join(' ').toUpperCase();
+      model = rebuiltModelWords.join(' ');
+    }
+  }
+}
 return {
   category,
   brand,
