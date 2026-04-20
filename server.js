@@ -1270,67 +1270,9 @@ const aiColor = cleanAiValue(geminiAnalysis?.color);
     
 const tempImage = saveTempImageAndGetUrl(req, imageBase64);
 const tempImageUrl = tempImage.publicUrl;
-
 console.log('TEMP IMAGE URL:', tempImageUrl);
-const vision = await googleVisionAnnotate(imageBase64);
 
-const labels = (vision.labels || []).map(l => (l.description || '').toLowerCase());
-const logos = (vision.logos || []).map(l => (l.description || '').toLowerCase());
-const text = (vision.text || '').toLowerCase();
-
-const visionTextTokens = text
-? text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
-    .split(/\s+/)
-    .filter(Boolean)
-: [];
-
-const visionSignals = [
-...labels,
-...logos,
-...visionTextTokens
-];
-
-console.log("VISION SIGNALS FULL:", JSON.stringify(visionSignals)); 
-    
-// === DEDUZIONE CATEGORIA ===
-let detectedCategory = '';
-
-if (visionSignals.some(l => l.includes('t-shirt') || l.includes('shirt'))) {
-  detectedCategory = 't-shirt';
-}
-if (visionSignals.some(l => l.includes('hoodie') || l.includes('sweatshirt'))) {
-  detectedCategory = 'hoodie';
-}
-if (visionSignals.some(l => l.includes('jacket') || l.includes('coat') || l.includes('blazer'))) {
-  detectedCategory = 'jacket';
-}
-if (visionSignals.some(l => l.includes('jeans') || l.includes('denim'))) {
-  detectedCategory = 'jeans';
-}
-if (visionSignals.some(l =>
-  l.includes('hat') ||
-  l.includes('cap') ||
-  l.includes('cappello') ||
-  l.includes('headwear')
-)) {
-  detectedCategory = 'hat';
-}
-if (visionSignals.some(l =>
-  l.includes('shoe') ||
-  l.includes('shoes') ||
-  l.includes('sneaker') ||
-  l.includes('sneakers') ||
-  l.includes('trainer') ||
-  l.includes('trainers') ||
-  l.includes('running shoe') ||
-  l.includes('basketball shoe') ||
-  l.includes('skate shoe')
-)) {
-  detectedCategory = 'shoe';
-}
-    
+   
 const geminiCategory = (() => {
   const c = (aiCategory || '').toLowerCase().trim();
   if (!c || c === 'non identificato') return '';
@@ -1343,20 +1285,11 @@ const geminiCategory = (() => {
   return '';
 })();
     
-const photoCategory = (detectedCategory || '').toLowerCase().trim();
-
-let finalCategory = geminiCategory || photoCategory || 't-shirt';
-let categoryValidation = 'no-signal';
+let finalCategory = geminiCategory || 't-shirt';
+let categoryValidation = geminiCategory ? 'gemini-only' : 'gemini-missing';
     
-if (geminiCategory) {
-  categoryValidation = 'gemini-only';
-} else if (photoCategory) {
-  categoryValidation = 'photo-fallback';
-}
-
 console.log("FINAL CATEGORY:", finalCategory);
 console.log("CATEGORY VALIDATION:", categoryValidation);
-console.log("VISION LABELS:", labels);
     
     // Geo
     const ctxGeo = getSearchContext({ country, continent });
@@ -1584,38 +1517,8 @@ if (!merged.length) {
 if (!topResults.length) {
   topResults = merged.slice(0, 2);
 }
-const titlesForExtraction = anchorTitle
-  ? [anchorTitle]
-  : topResults.map(it => it.title || '');
     
-const productInfo = extractProductInfo({
-  labelAnnotations: vision.labels,
-  logoAnnotations: vision.logos,
-  text: vision.text,
-  candidateTitles: titlesForExtraction,
-  visionColors: vision.colors,
-});
-const visionCategory = finalCategory || '';
-const visionColor = colorFromVision(vision.colors) || '';
-let visionValidation = {
-  categoryMatch: false,
-  colorMatch: false,
-};
-if (productInfo.category && visionCategory) {
-   const pCat = productInfo.category.toLowerCase();
-   const vCat = visionCategory.toLowerCase();
-   visionValidation.categoryMatch =
-    pCat.includes(vCat) ||
-    vCat.includes(pCat) ||
-    (pCat === 'maglietta' && (vCat === 't-shirt' || vCat === 'shirt')) ||
-    (pCat === 'scarpe' && (vCat === 'shoe' || vCat === 'sneaker')) ||
-    (pCat === 'cappello' && vCat === 'hat');
- }
-if (productInfo.color && visionColor) {
-  visionValidation.colorMatch =
-    productInfo.color.toLowerCase() === visionColor.toLowerCase();
-}
-console.log("PRODUCT INFO:", productInfo);
+let visionValidation = null;    
     
     // Whitelist + blacklist
     const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
@@ -1761,18 +1664,15 @@ const suggested = humanRound(sellableBase);
         anchorTitle
       },
       visionValidation,
-      category: finalCategory || productInfo.category,
-      brand: finalBrand || productInfo.brand,
-      model: finalModel || productInfo.model,
-      color: finalColor || productInfo.color,
+      category: finalCategory || 'Non identificato',
+      brand: finalBrand || 'Non identificato',
+      model: finalModel || 'Non identificato',
+      color: finalColor || 'Non identificato',
       queryUsed: usedQuery,
       queriesTried: queries.slice(0, 8),
-      visionPreview: {
-        brandVision: vision.logos?.[0]?.description || null,
-        topLabels: (vision.labels || []).slice(0,5).map(l => `${l.description} (${(l.score*100|0)}%)`),
-        textHint: vision.text?.slice(0, 120) || null,
-        colorGuess: colorFromVision(vision.colors) || null
-      },
+      
+      visionPreview: null,
+    
       params: { includeShopping: !!includeShopping, condition: mode, strictBrand,
       form: { brand, model, category, pattern, gender, color: contextScore.color }, kFactor: kVal },
       note: (!brand && !model) ? 'Per un’analisi più puntuale, indica marca e/o modello nel form.' : null,
