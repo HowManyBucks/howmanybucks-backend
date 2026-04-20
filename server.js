@@ -1478,14 +1478,13 @@ merged = merged.filter(item => {
 });
 // === FILTRO BRAND + CATEGORIA DINAMICO ===
 
-  const dynamicBrandSignals = uniq([
-  brand,
-  brandResolved,
-  vision.logos?.[0]?.description || ''
+const dynamicBrandSignals = uniq([
+  finalBrand,
+  brandResolved
 ])
   .map(x => norm(x))
   .filter(Boolean);
-
+  
 const dynamicCategorySignals = uniq([
   finalCategory,
   ...(CATEGORY_SYNONYMS[finalCategory] || [])
@@ -1637,13 +1636,12 @@ console.log("PRODUCT INFO:", productInfo);
       ? ENV.STRICT_BRAND_DEFAULT
       : !!strictBrandFromClient;
 
-    let filteredStrict = filteredWL;
-    if (brand) {
-      const onlyBrand = filteredWL.filter(it => {
+   let filteredStrict = filteredWL;
+   if (finalBrand) {
+     const onlyBrand = filteredWL.filter(it => {
       const hay = `${it.title || ''} ${it.snippet || ''}`;
-      return containsWord(hay, brand) || containsWord(hay, brandResolved);
-      });
-
+      return containsWord(hay, finalBrand) || containsWord(hay, brandResolved);
+    });
     filteredStrict = strictBrand
       ? (onlyBrand.length ? onlyBrand : filteredWL)
       : (onlyBrand.length >= 6 ? onlyBrand : filteredWL);
@@ -1651,9 +1649,14 @@ console.log("PRODUCT INFO:", productInfo);
 
     // Ranking
     const contextScore = {
-      brand, model, gender, color: color || colorFromVision(vision.colors) || '', category,
+      brand: finalBrand,
+      model: finalModel,
+      gender,
+      color: finalColor,
+      category: finalCategory,
       siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
     };
+    
     const cleaned = filteredStrict.filter(it => {
       const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
       return !isExcludedApparelResult(text) && matchesApparelCategory(text, finalCategory);
