@@ -208,21 +208,22 @@ function domainOf(urlStr) {
 }
 
 // ===== GEMINI ANALYZE =====
+
 async function analyzeItemWithGemini(imageBase64) {
   try {
     const originalBase64 = String(imageBase64 || '');
     const cleanBase64 = stripBase64Prefix(originalBase64);
-
+    
     const detectedMimeType =
       originalBase64.startsWith('data:image/png;base64,') ? 'image/png' :
       originalBase64.startsWith('data:image/webp;base64,') ? 'image/webp' :
       originalBase64.startsWith('data:image/jpeg;base64,') ? 'image/jpeg' :
       originalBase64.startsWith('data:image/jpg;base64,') ? 'image/jpeg' :
       'image/jpeg';
-
+    
     console.log('BASE64 LENGTH:', cleanBase64.length);
     console.log('GEMINI MIME TYPE:', detectedMimeType);
-
+    
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
       {
@@ -237,31 +238,13 @@ async function analyzeItemWithGemini(imageBase64) {
               role: "user",
               parts: [
                 {
-                  text: `Analizza questa immagine di un capo di abbigliamento o accessorio fashion.
-
-Rispondi SOLO in JSON valido, senza testo extra, senza markdown, senza spiegazioni.
-
-Devi restituire questi campi:
-- "categoryLabel": una descrizione breve e leggibile della categoria del prodotto, in italiano
-- "brand": la marca del prodotto
-- "model": il modello o nome del prodotto
-- "color": il colore principale dell'oggetto
-
-Regole:
-- "categoryLabel" deve essere una categoria breve e utile, ad esempio:
-  "Giacca denim", "T-shirt", "Felpa", "Sneaker", "Cappello", "Jeans", "Camicia"
-- il colore deve riferirsi all'oggetto, NON allo sfondo
-- se un valore non è identificabile, scrivi "Non identificato"
-- non inventare informazioni
-- usa il testo visibile sul prodotto se presente
-- se il brand è riconoscibile da logo, scritta o stile, indicalo
-- il model deve essere il nome/modello del prodotto se chiaramente riconoscibile
-
-Formato esatto richiesto:
+                  text: `Analizza questa immagine di un capo di abbigliamento.
+Rispondi SOLO in JSON valido senza testo extra.
+Formato:
 {
-  "categoryLabel": "...",
   "brand": "...",
   "model": "...",
+  "category": "...",
   "color": "..."
 }`
                 },
@@ -277,63 +260,59 @@ Formato esatto richiesto:
         })
       }
     );
-
     const data = await response.json();
-
-    console.log('GEMINI FULL RESPONSE:', JSON.stringify(data));
-
+    
+    console.log('GEMINI FULL RESPONSE:', JSON.stringify(data));  
+    
     const parts = data?.candidates?.[0]?.content?.parts || [];
+  
     const rawText = parts
       .map(p => p.text || '')
       .join(' ')
       .trim();
+  
+console.log('GEMINI RAW FULL:', rawText);
+console.log('GEMINI RAW:', rawText);
+console.log('RAW LENGTH:', rawText.length);
+    
+let parsed;
+    
+try {
+  const cleaned = rawText
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
 
-    console.log('GEMINI RAW FULL:', rawText);
-    console.log('GEMINI RAW:', rawText);
-    console.log('RAW LENGTH:', rawText.length);
+  console.log('GEMINI CLEANED:', cleaned);
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('No JSON found');
+  }
+  parsed = JSON.parse(jsonMatch[0]);
+} catch (e) {
+  console.warn('GEMINI PARSE FALLBACK:', rawText);
+  parsed = {
+    brand: "Non identificato",
+    model: "Non identificato",
+    category: "Non identificato",
+    color: "Non identificato"
+  };
+}
 
-    let parsed;
-
-    try {
-      const cleaned = rawText
-        .replace(/```json/gi, '')
-        .replace(/```/g, '')
-        .trim();
-
-      console.log('GEMINI CLEANED:', cleaned);
-
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found');
-      }
-
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.warn('GEMINI PARSE FALLBACK:', rawText);
-      parsed = {
-        categoryLabel: "Non identificato",
-        brand: "Non identificato",
-        model: "Non identificato",
-        color: "Non identificato"
-      };
-    }
-
-    return {
-      categoryLabel: String(parsed?.categoryLabel || 'Non identificato').trim() || 'Non identificato',
-      brand: String(parsed?.brand || 'Non identificato').trim() || 'Non identificato',
-      model: String(parsed?.model || 'Non identificato').trim() || 'Non identificato',
-      color: String(parsed?.color || 'Non identificato').trim() || 'Non identificato'
-    };
-  } catch (err) {
+return parsed;
+} catch (err) {
     console.error('GEMINI ERROR:', err.message);
     return {
-      categoryLabel: "Non identificato",
       brand: "Non identificato",
       model: "Non identificato",
+      category: "Non identificato",
       color: "Non identificato"
     };
   }
 }
+
+
+
 
 // ===== LEXICON =====
 const STOPWORDS = new Set([
