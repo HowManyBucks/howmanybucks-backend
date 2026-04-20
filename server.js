@@ -1352,7 +1352,7 @@ const qb = buildCandidateQueries(
     gender,
     color: finalColor
   },
-  vision
+  { logos: [], text: '', labels: [], colors: [] }
 );
     
 const queries = qb.queries;
