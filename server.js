@@ -1350,9 +1350,8 @@ console.log("VISION LABELS:", labels);
    // Query
     
 const finalBrand =
-   (brand && brand.trim()) ||
+  (brand && brand.trim()) ||
   (aiBrand && aiBrand !== 'Non identificato' && aiBrand.trim()) ||
-  (analysis.brandResolved && analysis.brandResolved.trim()) ||
   '';
     
 const finalModel =
@@ -1374,7 +1373,10 @@ const finalCategoryFromAI = (() => {
 const finalColor =
   (color && color.trim()) ||
   (aiColor && aiColor !== 'Non identificato' && aiColor.trim()) ||
-  (analysis.visionPreview?.colorGuess || '');
+  (geminiAnalysis?.color && geminiAnalysis.color !== 'Non identificato'
+      ? String(geminiAnalysis.color).trim()
+      : '') ||
+  '';
     
 const queryCategory =
   (category && category.trim()) ||
