@@ -435,6 +435,7 @@ const colorFromVision = colors => {
 };
 
 // ===== QUERY BUILDER (precedenza: marca form > marca+modello > marca+logo > logo) =====
+
 function buildCandidateQueries(form, vision) {
   const formBrand  = form.brand ? norm(form.brand) : '';
   const formModel  = form.model ? norm(form.model) : '';
@@ -442,48 +443,40 @@ function buildCandidateQueries(form, vision) {
   const formPat    = form.pattern ? expandPattern(form.pattern).map(norm) : [];
   const formGender = form.gender ? norm(form.gender) : '';
   const formColor  = form.color ? norm(form.color) : '';
-
-  const logoBrand  = vision.logos?.[0]?.description ? norm(vision.logos[0].description) : '';
-  const ocrTokens  = tokenizeKeep(vision.text).slice(0, 6);
-  const strongLbls = (vision.labels || [])
-    .filter(l => l.score >= 0.80)
-    .map(l => norm(l.description))
-    .filter(t => t && !STOPWORDS.has(t));
-
-  const visionColor = colorFromVision(vision.colors);
-  const colorToken  = formColor || visionColor || '';
+  
   const catToken = formCat[0] || '';
   const patToken = formPat[0] || '';
+  const colorToken = formColor || '';
+  
   const J = (...parts) => norm(parts.filter(Boolean).join(' '));
-
   const Q = [];
-
+  
+  if (formBrand && formModel) {
+    Q.push(J(formBrand, formModel, colorToken, catToken));
+    Q.push(J(formBrand, formModel, catToken));
+    Q.push(J(formBrand, formModel));
+  }
+  
   if (formBrand) {
-    if (formModel) {
-      Q.push(J(formBrand, formModel, patToken, colorToken, formGender, catToken));
-      Q.push(J(formBrand, formModel, colorToken, catToken));
-      Q.push(J(formBrand, formModel, catToken));
-    }
-    if (logoBrand && logoBrand !== formBrand) {
-      Q.push(J(formBrand, logoBrand, colorToken, catToken));
-    }
-    Q.push(J(formBrand, patToken, colorToken, formGender, catToken));
     Q.push(J(formBrand, colorToken, catToken));
     Q.push(J(formBrand, catToken));
+    Q.push(J(formBrand));
   }
-
-  if (!formBrand && logoBrand) {
-    Q.push(J(logoBrand, ocrTokens.slice(0,2).join(' '), colorToken, formGender, catToken));
-    Q.push(J(logoBrand, colorToken, catToken));
-    Q.push(J(logoBrand, catToken));
+  
+  if (!formBrand && formModel) {
+    Q.push(J(formModel, colorToken, catToken));
+    Q.push(J(formModel, catToken));
+    Q.push(J(formModel));
   }
-
-  if (ocrTokens.length) Q.push(J(ocrTokens.slice(0,3).join(' '), colorToken, formGender, catToken));
-  if (strongLbls.length) Q.push(J(strongLbls.slice(0,3).join(' '), colorToken, formGender, catToken));
-
+  
+  if (catToken) {
+    Q.push(J(colorToken, catToken));
+    Q.push(J(catToken));
+  }
+  
   if (!Q.length) Q.push('t-shirt');
   const queries = uniq(Q).filter(q => q.split(' ').length >= 1);
-  const brandResolved = formBrand || logoBrand || '';
+  const brandResolved = formBrand || '';
   return { queries, brandResolved };
 }
 
@@ -1337,28 +1330,30 @@ if (visionSignals.some(l =>
 )) {
   detectedCategory = 'shoe';
 }
-const formCategory = (category || '').toLowerCase().trim();
+    
+const geminiCategory = (() => {
+  const c = (aiCategory || '').toLowerCase().trim();
+  if (!c || c === 'non identificato') return '';
+  if (c.includes('t-shirt') || c.includes('shirt')) return 't-shirt';
+  if (c.includes('hoodie') || c.includes('felpa') || c.includes('sweatshirt')) return 'hoodie';
+  if (c.includes('jacket') || c.includes('giacca') || c.includes('coat') || c.includes('blazer')) return 'jacket';
+  if (c.includes('jeans') || c.includes('denim')) return 'jeans';
+  if (c.includes('shoe') || c.includes('scarpa') || c.includes('sneaker')) return 'shoe';
+  if (c.includes('hat') || c.includes('cap') || c.includes('cappello')) return 'hat';
+  return '';
+})();
+    
 const photoCategory = (detectedCategory || '').toLowerCase().trim();
 
-let finalCategory = formCategory || photoCategory || 't-shirt';
-let categoryValidation = 'no-photo-signal';
-
-if (formCategory && photoCategory) {
-  if (formCategory === photoCategory) {
-    finalCategory = formCategory;
-    categoryValidation = 'match';
-  } else {
-    finalCategory = photoCategory;
-    categoryValidation = 'photo-overrides-form';
-  }
-} else if (formCategory) {
-  finalCategory = formCategory;
-  categoryValidation = 'form-only';
-} else if (photoCategory) {
-  finalCategory = photoCategory;
-  categoryValidation = 'photo-only';
-}
+let finalCategory = geminiCategory || photoCategory || 't-shirt';
+let categoryValidation = 'no-signal';
     
+if (geminiCategory) {
+  categoryValidation = 'gemini-only';
+} else if (photoCategory) {
+  categoryValidation = 'photo-fallback';
+}
+
 console.log("FINAL CATEGORY:", finalCategory);
 console.log("CATEGORY VALIDATION:", categoryValidation);
 console.log("VISION LABELS:", labels);
@@ -1379,31 +1374,12 @@ const finalModel =
   model && model.trim() ? model.trim() :
   (aiModel && aiModel !== 'Non identificato' ? aiModel.trim() : '');
     
-const finalCategoryFromAI = (() => {
-  const c = (aiCategory || '').toLowerCase();
-  if (!c || c === 'non identificato') return '';
-  if (c.includes('t-shirt') || c.includes('shirt')) return 't-shirt';
-  if (c.includes('hoodie') || c.includes('felpa') || c.includes('sweatshirt')) return 'hoodie';
-  if (c.includes('jacket') || c.includes('giacca') || c.includes('coat')) return 'jacket';
-  if (c.includes('jeans') || c.includes('denim')) return 'jeans';
-  if (c.includes('shoe') || c.includes('scarpa') || c.includes('sneaker')) return 'shoe';
-  if (c.includes('hat') || c.includes('cap') || c.includes('cappello')) return 'hat';
-  return '';
-})();
-    
 const finalColor =
-  (color && color.trim()) ||
-  (aiColor && aiColor !== 'Non identificato' && aiColor.trim()) ||
-  (geminiAnalysis?.color && geminiAnalysis.color !== 'Non identificato'
-      ? String(geminiAnalysis.color).trim()
-      : '') ||
+  cleanAiValue(color) ||
+  aiColor ||
   '';
-    
-const queryCategory =
-  (category && category.trim()) ||
-  (aiCategory && aiCategory !== 'Non identificato' && aiCategory.trim()) ||
-  '';
-    
+const queryCategory = finalCategory || '';
+
 const qb = buildCandidateQueries(
   {
     brand: finalBrand,
