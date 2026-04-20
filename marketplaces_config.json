@@ -17,7 +17,7 @@
         {
           "domain": "www.mercadolibre.com.ar",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -74,7 +74,7 @@
         {
           "domain": "www.mercadolivre.com.br",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.olx.com.br",
@@ -115,7 +115,7 @@
         {
           "domain": "www.kijiji.ca",
           "type": "classifieds",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -141,12 +141,12 @@
         {
           "domain": "www.kleinanzeigen.de",
           "type": "classifieds",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.vinted.de",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -157,7 +157,7 @@
         {
           "domain": "es.wallapop.com",
           "type": "classifieds",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "m.facebook.com/marketplace",
@@ -182,7 +182,7 @@
         {
           "domain": "www.vinted.es",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -208,7 +208,7 @@
         {
           "domain": "www.leboncoin.fr",
           "type": "classifieds",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.vestiairecollective.com",
@@ -218,7 +218,7 @@
         {
           "domain": "www.vinted.fr",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -254,7 +254,7 @@
         {
           "domain": "www.vinted.co.uk",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -310,44 +310,64 @@
       "gl": "it",
       "sites": [
         {
-          "domain": "ebay.it",
-          "type": "general",
-          "weight": 0.9
-        },
-        {
-          "domain": "m.facebook.com/marketplace",
-          "type": "classifieds",
-          "weight": 0.9
-        },
-        {
-          "domain": "www.depop.com",
-          "type": "apparel",
-          "weight": 0.8
-        },
-        {
-          "domain": "www.facebook.com/marketplace",
-          "type": "classifieds",
-          "weight": 0.95
-        },
-        {
-          "domain": "www.grailed.com",
-          "type": "streetwear",
-          "weight": 0.6
-        },
-        {
           "domain": "www.subito.it",
           "type": "classifieds",
-          "weight": 1.0
-        },
-        {
-          "domain": "www.vestiairecollective.com",
-          "type": "luxury",
-          "weight": 0.7
+          "weight": 1.2
         },
         {
           "domain": "www.vinted.it",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1.1
+        },
+        {
+          "domain": "www.depop.com",
+          "type": "apparel",
+          "weight": 1
+        },
+        {
+          "domain": "www.grailed.com",
+          "type": "streetwear",
+          "weight": 1
+        },
+        {
+          "domain": "www.vestiairecollective.com",
+          "type": "luxury",
+          "weight": 1.3
+        },
+        {
+          "domain": "www.farfetch.com",
+          "type": "luxury",
+          "weight": 1.2
+        },
+        {
+          "domain": "www.yoox.com",
+          "type": "luxury",
+          "weight": 1.2
+        },
+        {
+          "domain": "www.luisaviaroma.com",
+          "type": "luxury",
+          "weight": 1.2
+        },
+        {
+          "domain": "ebay.it",
+          "type": "general",
+          "weight": 0.8
+        },
+        {
+          "domain": "m.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.6
+        },
+        {
+          "domain": "www.facebook.com/marketplace",
+          "type": "classifieds",
+          "weight": 0.65
+        },
+        {
+          "domain": "www.zalando.it",
+          "type": "retail",
+          "weight": 0.6
         }
       ]
     },
@@ -358,12 +378,12 @@
         {
           "domain": "auctions.yahoo.co.jp",
           "type": "auctions",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "jp.mercari.com",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "m.facebook.com/marketplace",
@@ -399,7 +419,7 @@
         {
           "domain": "www.mercadolibre.com.mx",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.segundamano.mx",
@@ -430,12 +450,12 @@
         {
           "domain": "www.marktplaats.nl",
           "type": "classifieds",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.vinted.nl",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -456,7 +476,7 @@
         {
           "domain": "www.trademe.co.nz",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -467,7 +487,7 @@
         {
           "domain": "allegro.pl",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "m.facebook.com/marketplace",
@@ -487,7 +507,7 @@
         {
           "domain": "www.vinted.pl",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         }
       ]
     },
@@ -508,7 +528,7 @@
         {
           "domain": "poshmark.com",
           "type": "apparel",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.depop.com",
@@ -518,7 +538,7 @@
         {
           "domain": "www.ebay.com",
           "type": "general",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.etsy.com",
@@ -533,7 +553,7 @@
         {
           "domain": "www.grailed.com",
           "type": "streetwear",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "domain": "www.mercari.com",
@@ -566,13 +586,13 @@
       {
         "domain": "auctions.yahoo.co.jp",
         "type": "auctions",
-        "weight": 1.0,
+        "weight": 1,
         "country": "JP"
       },
       {
         "domain": "jp.mercari.com",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "JP"
       },
       {
@@ -616,19 +636,19 @@
       {
         "domain": "www.kleinanzeigen.de",
         "type": "classifieds",
-        "weight": 1.0,
+        "weight": 1,
         "country": "DE"
       },
       {
         "domain": "www.vinted.de",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "DE"
       },
       {
         "domain": "es.wallapop.com",
         "type": "classifieds",
-        "weight": 1.0,
+        "weight": 1,
         "country": "ES"
       },
       {
@@ -658,7 +678,7 @@
       {
         "domain": "www.vinted.es",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "ES"
       },
       {
@@ -682,7 +702,7 @@
       {
         "domain": "www.leboncoin.fr",
         "type": "classifieds",
-        "weight": 1.0,
+        "weight": 1,
         "country": "FR"
       },
       {
@@ -694,7 +714,7 @@
       {
         "domain": "www.vinted.fr",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "FR"
       },
       {
@@ -730,7 +750,7 @@
       {
         "domain": "www.vinted.co.uk",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "GB"
       },
       {
@@ -758,51 +778,75 @@
         "country": "IE"
       },
       {
-        "domain": "ebay.it",
-        "type": "general",
-        "weight": 0.9,
-        "country": "IT"
-      },
-      {
-        "domain": "m.facebook.com/marketplace",
-        "type": "classifieds",
-        "weight": 0.9,
-        "country": "IT"
-      },
-      {
-        "domain": "www.depop.com",
-        "type": "apparel",
-        "weight": 0.8,
-        "country": "IT"
-      },
-      {
-        "domain": "www.facebook.com/marketplace",
-        "type": "classifieds",
-        "weight": 0.95,
-        "country": "IT"
-      },
-      {
-        "domain": "www.grailed.com",
-        "type": "streetwear",
-        "weight": 0.6,
-        "country": "IT"
-      },
-      {
         "domain": "www.subito.it",
         "type": "classifieds",
-        "weight": 1.0,
-        "country": "IT"
-      },
-      {
-        "domain": "www.vestiairecollective.com",
-        "type": "luxury",
-        "weight": 0.7,
+        "weight": 1.2,
         "country": "IT"
       },
       {
         "domain": "www.vinted.it",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1.1,
+        "country": "IT"
+      },
+      {
+        "domain": "www.depop.com",
+        "type": "apparel",
+        "weight": 1,
+        "country": "IT"
+      },
+      {
+        "domain": "www.grailed.com",
+        "type": "streetwear",
+        "weight": 1,
+        "country": "IT"
+      },
+      {
+        "domain": "www.vestiairecollective.com",
+        "type": "luxury",
+        "weight": 1.3,
+        "country": "IT"
+      },
+      {
+        "domain": "www.farfetch.com",
+        "type": "luxury",
+        "weight": 1.2,
+        "country": "IT"
+      },
+      {
+        "domain": "www.yoox.com",
+        "type": "luxury",
+        "weight": 1.2,
+        "country": "IT"
+      },
+      {
+        "domain": "www.luisaviaroma.com",
+        "type": "luxury",
+        "weight": 1.2,
+        "country": "IT"
+      },
+      {
+        "domain": "ebay.it",
+        "type": "general",
+        "weight": 0.8,
+        "country": "IT"
+      },
+      {
+        "domain": "m.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.6,
+        "country": "IT"
+      },
+      {
+        "domain": "www.facebook.com/marketplace",
+        "type": "classifieds",
+        "weight": 0.65,
+        "country": "IT"
+      },
+      {
+        "domain": "www.zalando.it",
+        "type": "retail",
+        "weight": 0.6,
         "country": "IT"
       },
       {
@@ -826,19 +870,19 @@
       {
         "domain": "www.marktplaats.nl",
         "type": "classifieds",
-        "weight": 1.0,
+        "weight": 1,
         "country": "NL"
       },
       {
         "domain": "www.vinted.nl",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "NL"
       },
       {
         "domain": "allegro.pl",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "PL"
       },
       {
@@ -862,7 +906,7 @@
       {
         "domain": "www.vinted.pl",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "PL"
       }
     ],
@@ -900,7 +944,7 @@
       {
         "domain": "www.kijiji.ca",
         "type": "classifieds",
-        "weight": 1.0,
+        "weight": 1,
         "country": "CA"
       },
       {
@@ -918,7 +962,7 @@
       {
         "domain": "poshmark.com",
         "type": "apparel",
-        "weight": 1.0,
+        "weight": 1,
         "country": "US"
       },
       {
@@ -930,7 +974,7 @@
       {
         "domain": "www.ebay.com",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "US"
       },
       {
@@ -948,7 +992,7 @@
       {
         "domain": "www.grailed.com",
         "type": "streetwear",
-        "weight": 1.0,
+        "weight": 1,
         "country": "US"
       },
       {
@@ -1004,7 +1048,7 @@
       {
         "domain": "www.trademe.co.nz",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "NZ"
       }
     ],
@@ -1024,7 +1068,7 @@
       {
         "domain": "www.mercadolibre.com.ar",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "AR"
       },
       {
@@ -1048,7 +1092,7 @@
       {
         "domain": "www.mercadolivre.com.br",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "BR"
       },
       {
@@ -1072,7 +1116,7 @@
       {
         "domain": "www.mercadolibre.com.mx",
         "type": "general",
-        "weight": 1.0,
+        "weight": 1,
         "country": "MX"
       },
       {
