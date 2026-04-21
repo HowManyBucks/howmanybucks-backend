@@ -435,50 +435,85 @@ const colorFromVision = colors => {
 };
 
 // ===== QUERY BUILDER (precedenza: marca form > marca+modello > marca+logo > logo) =====
+function extractCoreModelTerms(model = '', category = '') {
+  const categoryWords = new Set(
+    expandCategory(category)
+      .map(norm)
+      .flatMap(x => x.split(' ').filter(Boolean))
+  );
+
+  const stop = new Set([
+    ...Array.from(STOPWORDS),
+    ...Array.from(categoryWords),
+    'black', 'white', 'red', 'blue', 'green', 'brown', 'grey', 'gray',
+    'nero', 'bianco', 'rosso', 'blu', 'verde', 'marrone', 'grigio',
+    'jacket', 'coat', 'shirt', 'tee', 't-shirt', 'shoe', 'shoes',
+    'sneaker', 'sneakers', 'denim', 'giacca', 'maglietta', 'scarpa', 'scarpe'
+  ]);
+
+  const tokens = norm(model)
+    .split(' ')
+    .filter(Boolean)
+    .filter(t => t.length >= 3)
+    .filter(t => !stop.has(t));
+  return uniq(tokens).slice(0, 2);
+}
 
 function buildCandidateQueries(form, vision) {
   const formBrand  = form.brand ? norm(form.brand) : '';
-  const formModel  = form.model ? norm(form.model) : '';
+  const formModel  = form.model ? String(form.model).trim() : '';
   const formCat    = form.category ? expandCategory(form.category).map(norm) : [];
   const formPat    = form.pattern ? expandPattern(form.pattern).map(norm) : [];
   const formGender = form.gender ? norm(form.gender) : '';
   const formColor  = form.color ? norm(form.color) : '';
-  
+
   const catToken = formCat[0] || '';
   const patToken = formPat[0] || '';
   const colorToken = formColor || '';
-  
+
+  const coreModelTerms = extractCoreModelTerms(formModel, catToken);
+  const shortModel = coreModelTerms.join(' ');
+
   const J = (...parts) => norm(parts.filter(Boolean).join(' '));
   const Q = [];
-  
-  if (formBrand && formModel) {
+
+  // LIVELLO 1 — marca + modello completo + colore + categoria
+
+  if (formBrand && formModel && catToken) {
     Q.push(J(formBrand, formModel, colorToken, catToken));
     Q.push(J(formBrand, formModel, catToken));
-    Q.push(J(formBrand, formModel));
   }
-  
-  if (formBrand) {
+
+  // LIVELLO 2 — marca + modello ridotto + categoria
+  if (formBrand && shortModel && catToken) {
+    Q.push(J(formBrand, shortModel, colorToken, catToken));
+    Q.push(J(formBrand, shortModel, catToken));
+  }
+
+  // LIVELLO 3 — marca + categoria + colore
+  if (formBrand && catToken) {
     Q.push(J(formBrand, colorToken, catToken));
     Q.push(J(formBrand, catToken));
+  }
+
+  // LIVELLO 4 — marca sola
+  if (formBrand) {
     Q.push(J(formBrand));
   }
-  
-  if (!formBrand && formModel) {
-    Q.push(J(formModel, colorToken, catToken));
-    Q.push(J(formModel, catToken));
-    Q.push(J(formModel));
-  }
-  
+
+  // LIVELLO 5 — categoria + colore
   if (catToken) {
     Q.push(J(colorToken, catToken));
     Q.push(J(catToken));
   }
   
   if (!Q.length) Q.push('t-shirt');
+  
   const queries = uniq(Q).filter(q => q.split(' ').length >= 1);
   const brandResolved = formBrand || '';
   return { queries, brandResolved };
 }
+
 
 // ===== SERP HELPERS =====
 async function serpSearch({ query, site, num, hl='it', gl='it' }) {
