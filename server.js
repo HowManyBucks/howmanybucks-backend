@@ -1509,15 +1509,20 @@ dynamicHintSignals = buildVisualHintSignals(
 );
   
 merged = merged.filter(item => {
+
   const text = `${item.title || ''} ${item.snippet || ''}`;
-  
+
   const brandOk = finalBrand
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
-  
+
   const categoryOk = matchesApparelCategory(text, finalCategory);
-  
-  return brandOk && categoryOk;
+
+  // 🔥 NUOVA LOGICA:
+
+  // invece di AND rigido → rendiamo il filtro più permissivo
+
+  return brandOk || categoryOk;
 });
   
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
