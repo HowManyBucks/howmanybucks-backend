@@ -1257,6 +1257,14 @@ function titlesMatchTop2(a, b) {
     colorsB: B.colors,
   };
 }
+function isLuxuryBrand(brand = '') {
+  const b = norm(brand);
+  return [
+    'valentino', 'gucci', 'prada', 'balenciaga', 'louis vuitton',
+    'fendi', 'burberry', 'moncler', 'dolce gabbana', 'dolce & gabbana',
+    'giorgio armani', 'emporio armani', 'armani', 'off white'
+  ].some(x => b.includes(norm(x)));
+}
 app.post('/search/image', async (req, res) => {
   try {
     console.log("SEARCH_IMAGE_HIT");
@@ -1613,26 +1621,54 @@ let visionValidation = null;
     if (ranked.length >= 80) {
       TOP_N = 80;
     }
-
     const topForPricing = ranked.slice(0, TOP_N);
-
     console.log('TOP_N USATO:', TOP_N);
     console.log('RANKED COUNT:', ranked.length);
-
+const luxuryMode = isLuxuryBrand(finalBrand);
+const premiumTypes = new Set(['luxury', 'apparel', 'streetwear', 'classifieds']);
 const ebayOnly = topForPricing.filter(it =>
   String(it.source || '').includes('ebay')
 );
-
-const strongHintMatches = ebayOnly.filter(it => {
+const premiumPool = topForPricing.filter(it => {
+  const d = domainOf(it.link);
+  const siteCfg = (ctxGeo.siteList || [])
+    .map(domain => domain.replace(/^www\./, ''));
+  return !!d && siteCfg.includes(d);
+});
+const strongHintMatches = topForPricing.filter(it => {
   const text = norm(`${it.title || ''} ${it.snippet || ''}`);
   const hitCount = dynamicHintSignals.filter(h => text.includes(h)).length;
   return hitCount >= 2;
 });
+let priceSource = topForPricing;
+    
+// Caso luxury: evita dominio eBay se ci sono abbastanza comparabili multi-source
+if (luxuryMode) {
+  const nonEbayPriced = topForPricing.filter(it =>
+    !String(it.source || '').includes('ebay') &&
+    parseMoney(it.price_str || it.title || it.snippet) != null
+  );
+  if (strongHintMatches.length >= 3) {
+    priceSource = strongHintMatches;
+  } else if (nonEbayPriced.length >= 3) {
+    priceSource = nonEbayPriced;
+  } else if (topForPricing.length >= 5) {
+    priceSource = topForPricing;
+  } else {
+    priceSource = ebayOnly.length ? ebayOnly : topForPricing;
+  }
+} else {
+  if (strongHintMatches.length >= 3) {
+    priceSource = strongHintMatches;
+  } else if (topForPricing.length >= 5) {
+    priceSource = topForPricing;
+  } else {
+    priceSource = ebayOnly.length ? ebayOnly : topForPricing;
+  }
+}
 
-const priceSource =
-  strongHintMatches.length >= 3
-    ? strongHintMatches
-    : (ebayOnly.length >= 5 ? ebayOnly : topForPricing);
+console.log('LUXURY MODE:', luxuryMode);
+console.log('PRICE SOURCE DOMAINS:', priceSource.map(it => domainOf(it.link)));
 
 const rawPrices = priceSource
   .map(it => parseMoney(it.price_str || it.title || it.snippet))
