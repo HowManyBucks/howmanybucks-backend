@@ -435,6 +435,7 @@ const colorFromVision = colors => {
 };
 
 // ===== QUERY BUILDER (precedenza: marca form > marca+modello > marca+logo > logo) =====
+
 function extractCoreModelTerms(model = '', category = '') {
   const categoryWords = new Set(
     expandCategory(category)
@@ -442,6 +443,23 @@ function extractCoreModelTerms(model = '', category = '') {
       .flatMap(x => x.split(' ').filter(Boolean))
   );
   
+  const stop = new Set([
+    ...Array.from(STOPWORDS),
+    ...Array.from(categoryWords),
+    'black', 'white', 'red', 'blue', 'green', 'brown', 'grey', 'gray',
+    'nero', 'bianco', 'rosso', 'blu', 'verde', 'marrone', 'grigio',
+    'jacket', 'coat', 'shirt', 'tee', 't-shirt', 'shoe', 'shoes',
+    'sneaker', 'sneakers', 'denim', 'giacca', 'maglietta', 'scarpa', 'scarpe'
+  ]);
+  
+  const tokens = norm(model)
+    .split(' ')
+    .filter(Boolean)
+    .filter(t => t.length >= 3)
+    .filter(t => !stop.has(t));
+  return uniq(tokens).slice(0, 2);
+}
+
 function extractSoftVisualHints(vision = {}) {
   const allowedHints = new Set([
     'denim', 'monogram', 'logo', 'jacquard', 'quilted', 'embroidered',
@@ -461,25 +479,10 @@ function extractSoftVisualHints(vision = {}) {
   
   return merged.filter(h => allowedHints.has(h)).slice(0, 6);
 }
+
 function countSignalHits(text = '', signals = []) {
   const t = norm(text);
   return signals.filter(sig => t.includes(norm(sig))).length;
-}
-  const stop = new Set([
-    ...Array.from(STOPWORDS),
-    ...Array.from(categoryWords),
-    'black', 'white', 'red', 'blue', 'green', 'brown', 'grey', 'gray',
-    'nero', 'bianco', 'rosso', 'blu', 'verde', 'marrone', 'grigio',
-    'jacket', 'coat', 'shirt', 'tee', 't-shirt', 'shoe', 'shoes',
-    'sneaker', 'sneakers', 'denim', 'giacca', 'maglietta', 'scarpa', 'scarpe'
-  ]);
-
-  const tokens = norm(model)
-    .split(' ')
-    .filter(Boolean)
-    .filter(t => t.length >= 3)
-    .filter(t => !stop.has(t));
-  return uniq(tokens).slice(0, 2);
 }
 
 function buildCandidateQueries(form, vision) {
