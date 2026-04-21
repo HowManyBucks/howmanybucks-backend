@@ -441,7 +441,30 @@ function extractCoreModelTerms(model = '', category = '') {
       .map(norm)
       .flatMap(x => x.split(' ').filter(Boolean))
   );
-
+  
+function extractSoftVisualHints(vision = {}) {
+  const allowedHints = new Set([
+    'denim', 'monogram', 'logo', 'jacquard', 'quilted', 'embroidered',
+    'embroidered logo', 'distressed', 'washed', 'oversized', 'trucker',
+    'varsity', 'leather', 'suede', 'wool', 'cotton', 'canvas'
+  ]);
+  
+  const labels = (vision.labels || [])
+    .map(l => norm(l.description || ''))
+    .filter(Boolean);
+  
+  const textTokens = norm(vision.text || '')
+    .split(' ')
+    .filter(Boolean);
+  
+  const merged = uniq([...labels, ...textTokens]).map(norm);
+  
+  return merged.filter(h => allowedHints.has(h)).slice(0, 6);
+}
+function countSignalHits(text = '', signals = []) {
+  const t = norm(text);
+  return signals.filter(sig => t.includes(norm(sig))).length;
+}
   const stop = new Set([
     ...Array.from(STOPWORDS),
     ...Array.from(categoryWords),
@@ -613,6 +636,12 @@ function scoreItem(it, ctx) {
   let s = 0;
   if (ctx.brand && containsWord(title, ctx.brand)) s += 40;
   if (ctx.model && containsWord(title, ctx.model)) s += 28;
+  const modelTokenHits = (ctx.modelTokens || []).filter(t => title.includes(t)).length;
+  s += Math.min(18, modelTokenHits * 9);
+
+  const softHintHits = (ctx.softVisualHints || []).filter(t => title.includes(t)).length;
+  s += Math.min(12, softHintHits * 4);
+  
   if (ctx.color && containsWord(title, ctx.color)) s += 6;
   if (ctx.gender) {
     const G = {
@@ -1314,7 +1343,9 @@ const aiColor = cleanAiValue(geminiAnalysis?.color);
 const tempImage = saveTempImageAndGetUrl(req, imageBase64);
 const tempImageUrl = tempImage.publicUrl;
 console.log('TEMP IMAGE URL:', tempImageUrl);
-
+const vision = await googleVisionAnnotate(imageBase64);
+const softVisualHints = extractSoftVisualHints(vision);
+console.log('SOFT VISUAL HINTS:', softVisualHints);
    
 const geminiCategory = (() => {
   const c = (aiCategory || '').toLowerCase().trim();
@@ -1467,48 +1498,34 @@ const dynamicCategorySignals = uniq([
 ])
   .map(x => norm(x))
   .filter(Boolean);
-
-  dynamicHintSignals = buildVisualHintSignals(
+  
+dynamicHintSignals = buildVisualHintSignals(
   combined,
   dynamicBrandSignals,
   dynamicCategorySignals
 );
-
+  
 merged = merged.filter(item => {
-  const text = norm(`${item.title || ''} ${item.snippet || ''}`);
-
-  const hasBrand = dynamicBrandSignals.length
-    ? dynamicBrandSignals.some(b => text.includes(b))
-    : false;
-
-  const hasCategory = dynamicCategorySignals.length
-    ? dynamicCategorySignals.some(c => text.includes(c))
+  const text = `${item.title || ''} ${item.snippet || ''}`;
+  
+  const brandOk = finalBrand
+    ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
-
-  const hasHint = dynamicHintSignals.length
-    ? dynamicHintSignals.some(h => text.includes(h))
-    : false;
-
-  if (!hasCategory) return false;
-
-  if (dynamicBrandSignals.length) {
-    return hasBrand || hasHint;
-  }
-
-  return hasHint || hasCategory;
+  
+  const categoryOk = matchesApparelCategory(text, finalCategory);
+  
+  return brandOk && categoryOk;
 });
-
+  
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
 console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
 console.log('DYNAMIC HINT SIGNALS:', dynamicHintSignals);
-console.log('AFTER DYNAMIC BRAND FILTER:', merged.length);
-
-
+console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
+  
 console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
 console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
-console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
-console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
-console.log('AFTER DYNAMIC BRAND FILTER:', merged.length);
+console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
+  
 } catch (e) {
   console.warn('IMAGE SEARCH COMBINED FAILED:', e.message);
 }
@@ -1594,12 +1611,16 @@ let visionValidation = null;
     }
 
     // Ranking
+    const modelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
+
     const contextScore = {
       brand: finalBrand,
       model: finalModel,
       gender,
       color: finalColor,
       category: finalCategory,
+      modelTokens: modelMatchTokens,
+      softVisualHints,
       siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
     };
     
