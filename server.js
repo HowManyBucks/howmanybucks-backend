@@ -1574,20 +1574,15 @@ dynamicHintSignals = buildVisualHintSignals(
 );
   
 merged = merged.filter(item => {
-
   const text = `${item.title || ''} ${item.snippet || ''}`;
-
+  
   const brandOk = finalBrand
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
-
+  
   const categoryOk = matchesApparelCategory(text, finalCategory);
-
-  // 🔥 NUOVA LOGICA:
-
-  // invece di AND rigido → rendiamo il filtro più permissivo
-
-  return brandOk || categoryOk;
+  
+  return brandOk && categoryOk;
 });
   
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
@@ -1653,20 +1648,28 @@ if (!topResults.length) {
     
 let visionValidation = null;    
     
-    // Whitelist + blacklist
-    const whiteSet = new Set(siteList.map(s => s.replace(/^www\./,'')));
-    const filteredWL = merged.filter(it => {
-    const d = domainOf(it.link);
-      if (!d) return false;
-      if (isBlacklisted(d)) return false;
+   // Whitelist + blacklist
 
-      const dn = d.replace(/^www\./, '');
-
-    // accetta tutti i domini eBay quando la fonte è image-search eBay
-      const isAnyEbay = dn === 'ebay.it' || dn === 'ebay.com' || dn.endsWith('.ebay.com');
-
-      return whiteSet.has(dn) || includeShopping || isAnyEbay;
-    });
+const whiteSet = new Set(siteList.map(s => s.replace(/^www\./, '')));
+const isItalianMarket = (country || ENV.PRICE_COUNTRY) === 'IT';
+    
+const filteredWL = merged.filter(it => {
+  const d = domainOf(it.link);
+  if (!d) return false;
+  if (isBlacklisted(d)) return false;
+  
+  if (isItalianMarket) {
+    return isItalianPricingResult(it, siteList);
+  }
+  
+  const dn = d.replace(/^www\./, '');
+  return whiteSet.has(dn) || includeShopping;
+});
+    
+console.log('ITALIAN PRICE FILTER ACTIVE:', isItalianMarket);
+console.log('AFTER ITALIAN MARKET FILTER:', filteredWL.length);
+console.log('ITALIAN MARKET DOMAINS:', filteredWL.map(it => domainOf(it.link)));
+    
     /// Hard filter brand
     const strictBrand = strictBrandFromClient === null
       ? ENV.STRICT_BRAND_DEFAULT
@@ -1718,49 +1721,53 @@ let visionValidation = null;
     const topForPricing = ranked.slice(0, TOP_N);
     console.log('TOP_N USATO:', TOP_N);
     console.log('RANKED COUNT:', ranked.length);
+
 const luxuryMode = isLuxuryBrand(finalBrand);
-const premiumTypes = new Set(['luxury', 'apparel', 'streetwear', 'classifieds']);
-const ebayOnly = topForPricing.filter(it =>
+
+const italianTopForPricing = isItalianMarket
+  ? topForPricing.filter(it => isItalianPricingResult(it, siteList))
+  : topForPricing;
+
+const ebayOnly = italianTopForPricing.filter(it =>
   String(it.source || '').includes('ebay')
 );
-const premiumPool = topForPricing.filter(it => {
-  const d = domainOf(it.link);
-  const siteCfg = (ctxGeo.siteList || [])
-    .map(domain => domain.replace(/^www\./, ''));
-  return !!d && siteCfg.includes(d);
-});
-const strongHintMatches = topForPricing.filter(it => {
+
+const strongHintMatches = italianTopForPricing.filter(it => {
   const text = norm(`${it.title || ''} ${it.snippet || ''}`);
   const hitCount = dynamicHintSignals.filter(h => text.includes(h)).length;
   return hitCount >= 2;
 });
-let priceSource = topForPricing;
-    
-// Caso luxury: evita dominio eBay se ci sono abbastanza comparabili multi-source
+
+let priceSource = italianTopForPricing;
+
+// Caso luxury: sempre dentro il mercato italiano se country=IT
+
 if (luxuryMode) {
-  const nonEbayPriced = topForPricing.filter(it =>
+  const nonEbayPriced = italianTopForPricing.filter(it =>
     !String(it.source || '').includes('ebay') &&
     parseMoney(it.price_str || it.title || it.snippet) != null
   );
+
   if (strongHintMatches.length >= 3) {
     priceSource = strongHintMatches;
   } else if (nonEbayPriced.length >= 3) {
     priceSource = nonEbayPriced;
-  } else if (topForPricing.length >= 5) {
-    priceSource = topForPricing;
+  } else if (italianTopForPricing.length >= 5) {
+    priceSource = italianTopForPricing;
   } else {
-    priceSource = ebayOnly.length ? ebayOnly : topForPricing;
+    priceSource = ebayOnly.length ? ebayOnly : italianTopForPricing;
   }
 } else {
   if (strongHintMatches.length >= 3) {
     priceSource = strongHintMatches;
-  } else if (topForPricing.length >= 5) {
-    priceSource = topForPricing;
+  } else if (italianTopForPricing.length >= 5) {
+    priceSource = italianTopForPricing;
   } else {
-    priceSource = ebayOnly.length ? ebayOnly : topForPricing;
+    priceSource = ebayOnly.length ? ebayOnly : italianTopForPricing;
   }
 }
 
+console.log('ITALIAN TOP FOR PRICING COUNT:', italianTopForPricing.length);
 console.log('LUXURY MODE:', luxuryMode);
 console.log('PRICE SOURCE DOMAINS:', priceSource.map(it => domainOf(it.link)));
 
