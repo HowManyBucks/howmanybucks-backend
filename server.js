@@ -1603,7 +1603,9 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
 }
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
-const fallbackQueries = luxuryMode
+const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
+
+const fallbackQueries = fallbackLuxuryMode
   ? queries.filter(q => {
       const nq = norm(q);
       const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
@@ -1611,6 +1613,7 @@ const fallbackQueries = luxuryMode
       return hasBrand && modelHits >= 1;
     })
   : queries;
+    
 console.log('MODEL MATCH TOKENS:', modelMatchTokens);
 console.log('FALLBACK QUERIES USED:', fallbackQueries);
 
