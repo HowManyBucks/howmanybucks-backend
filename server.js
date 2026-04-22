@@ -549,6 +549,10 @@ function countSignalHits(text = '', signals = []) {
   const t = norm(text);
   return signals.filter(sig => t.includes(norm(sig))).length;
 }
+function countModelTokenMatches(text = '', modelTokens = []) {
+  const t = norm(text);
+  return (modelTokens || []).filter(tok => t.includes(norm(tok))).length;
+}
 
 function buildCandidateQueries(form, vision) {
   const formBrand  = form.brand ? norm(form.brand) : '';
@@ -1599,8 +1603,19 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
 }
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
+const fallbackQueries = luxuryMode
+  ? queries.filter(q => {
+      const nq = norm(q);
+      const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
+      const modelHits = modelMatchTokens.filter(tok => nq.includes(norm(tok))).length;
+      return hasBrand && modelHits >= 1;
+    })
+  : queries;
+console.log('MODEL MATCH TOKENS:', modelMatchTokens);
+console.log('FALLBACK QUERIES USED:', fallbackQueries);
+
 if (!merged.length) {
-  for (const q of queries) {
+  for (const q of fallbackQueries) {
     const step = [];
     for (const site of siteList.slice(0, TOP_SITES)) {
       try {
@@ -1752,18 +1767,26 @@ if (isItalianMarket && italianTopForPricing.length < 3) {
         await sleep(250);
       } catch (e) {}
     }
+    
+const deduped = dedupeByLink(step)
+  .filter(it => isItalianPricingResult(it, siteList))
+  .filter(it => {
+    const text = `${it.title || ''} ${it.snippet || ''}`;
+    const brandOk = finalBrand
+      ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
+      : true;
+    const categoryOk = matchesApparelCategory(text, finalCategory);
+    
+    const modelHits = countModelTokenMatches(text, modelMatchTokens);
 
-    const deduped = dedupeByLink(step)
-      .filter(it => isItalianPricingResult(it, siteList))
-      .filter(it => {
-        const text = `${it.title || ''} ${it.snippet || ''}`;
-        const brandOk = finalBrand
-          ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
-          : true;
-        const categoryOk = matchesApparelCategory(text, finalCategory);
-        return brandOk && categoryOk;
-      })
-      .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
+    // luxury: richiedi almeno 1 token modello
+    if (luxuryMode) {
+      return brandOk && categoryOk && modelHits >= 1;
+    }
+    
+    return brandOk && categoryOk;
+  })
+  .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
 
     if (deduped.length >= 3) {
       italianFallback = deduped;
