@@ -1603,7 +1603,6 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
 }
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
-
 const fallbackModelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
 const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
     
@@ -1615,74 +1614,86 @@ const fallbackQueries = fallbackLuxuryMode
       return hasBrand && modelHits >= 1;
     })
   : queries;
-
+    
 console.log('MODEL MATCH TOKENS:', fallbackModelMatchTokens);
 console.log('FALLBACK QUERIES USED:', fallbackQueries);
-
+    
 if (!merged.length) {
   for (const q of fallbackQueries) {
     const step = [];
+    
     for (const site of siteList.slice(0, TOP_SITES)) {
       try {
-        const r = await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl });
+        const r = await serpSearch({
+          query: q,
+          site,
+          num: ENV.MAX_RESULTS_PER_SITE,
+          hl,
+          gl
+        });
         step.push(...r);
         await sleep(300);
-      } catch {}
+      } catch (e) {}
     }
+    
     if (includeShopping) {
       try {
-        const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
+        const shop = await serpShoppingGlobal({
+          query: q,
+          num: 25,
+          hl,
+          gl
+        });
         step.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
-      } catch {}
+      } catch (e) {}
     }
+    
     const deduped = dedupeByLink(step);
-    const priced = deduped.filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
+    const priced = deduped.filter(
+      it => parseMoney(it.price_str || it.title || it.snippet) != null
+    );
+
     if (priced.length >= 6) {
       merged = deduped;
       usedQuery = q;
       break;
     }
   }
-  
+
   if (!merged.length) {
     const q = fallbackQueries[0] || queries[0];
     let fb = [];
+
     for (const site of siteList.slice(0, TOP_SITES)) {
       try {
-        fb.push(...await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl }));
-      } catch {}
+        const r = await serpSearch({
+          query: q,
+          site,
+          num: ENV.MAX_RESULTS_PER_SITE,
+          hl,
+          gl
+        });
+        fb.push(...r);
+      } catch (e) {}
     }
+
     if (includeShopping) {
       try {
-        const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
+        const shop = await serpShoppingGlobal({
+          query: q,
+          num: 25,
+          hl,
+          gl
+        });
         fb.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
-      } catch {}
+      } catch (e) {}
     }
+    
     merged = dedupeByLink(fb);
     usedQuery = q;
   }
-}    
-
-
-
-  if (!merged.length) {
-    const q = queries[0];
-    let fb = [];
-    for (const site of siteList.slice(0, TOP_SITES)) {
-      try {
-        fb.push(...await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl }));
-      } catch {}
-    }
-    if (includeShopping) {
-      try {
-        const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
-        fb.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
-      } catch {}
-    }
-    merged = dedupeByLink(fb);
-    usedQuery = q;
-  }
- }
+}
+    
 if (!topResults.length) {
   topResults = merged.slice(0, 2);
 }
