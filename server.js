@@ -1718,15 +1718,69 @@ console.log('ITALIAN MARKET DOMAINS:', filteredWL.map(it => domainOf(it.link)));
     if (ranked.length >= 80) {
       TOP_N = 80;
     }
-    const topForPricing = ranked.slice(0, TOP_N);
-    console.log('TOP_N USATO:', TOP_N);
-    console.log('RANKED COUNT:', ranked.length);
+
+const topForPricing = ranked.slice(0, TOP_N);
+console.log('TOP_N USATO:', TOP_N);
+console.log('RANKED COUNT:', ranked.length);
 
 const luxuryMode = isLuxuryBrand(finalBrand);
 
-const italianTopForPricing = isItalianMarket
+let italianTopForPricing = isItalianMarket
   ? topForPricing.filter(it => isItalianPricingResult(it, siteList))
   : topForPricing;
+
+// FALLBACK FORTE: se il filtro Italia da image search non basta,
+// usa ricerca testuale sui siti italiani configurati
+if (isItalianMarket && italianTopForPricing.length < 3) {
+  console.log('ITALIAN FALLBACK SEARCH ACTIVATED');
+  
+  let italianFallback = [];
+  
+  for (const q of queries) {
+    const step = [];
+    
+    for (const site of siteList.slice(0, TOP_SITES)) {
+      try {
+        const r = await serpSearch({
+          query: q,
+          site,
+          num: ENV.MAX_RESULTS_PER_SITE,
+          hl,
+          gl
+        });
+        step.push(...r);
+        await sleep(250);
+      } catch (e) {}
+    }
+
+    const deduped = dedupeByLink(step)
+      .filter(it => isItalianPricingResult(it, siteList))
+      .filter(it => {
+        const text = `${it.title || ''} ${it.snippet || ''}`;
+        const brandOk = finalBrand
+          ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
+          : true;
+        const categoryOk = matchesApparelCategory(text, finalCategory);
+        return brandOk && categoryOk;
+      })
+      .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
+
+    if (deduped.length >= 3) {
+      italianFallback = deduped;
+      usedQuery = q;
+      break;
+    }
+
+    if (!italianFallback.length && deduped.length) {
+      italianFallback = deduped;
+      usedQuery = q;
+    }
+  }
+
+  if (italianFallback.length) {
+    italianTopForPricing = italianFallback;
+  }
+}
 
 const ebayOnly = italianTopForPricing.filter(it =>
   String(it.source || '').includes('ebay')
@@ -1735,12 +1789,10 @@ const ebayOnly = italianTopForPricing.filter(it =>
 const strongHintMatches = italianTopForPricing.filter(it => {
   const text = norm(`${it.title || ''} ${it.snippet || ''}`);
   const hitCount = dynamicHintSignals.filter(h => text.includes(h)).length;
-  return hitCount >= 2;
+  return hitCount >= 2
 });
 
 let priceSource = italianTopForPricing;
-
-// Caso luxury: sempre dentro il mercato italiano se country=IT
 
 if (luxuryMode) {
   const nonEbayPriced = italianTopForPricing.filter(it =>
@@ -1752,7 +1804,7 @@ if (luxuryMode) {
     priceSource = strongHintMatches;
   } else if (nonEbayPriced.length >= 3) {
     priceSource = nonEbayPriced;
-  } else if (italianTopForPricing.length >= 5) {
+  } else if (italianTopForPricing.length >= 3) {
     priceSource = italianTopForPricing;
   } else {
     priceSource = ebayOnly.length ? ebayOnly : italianTopForPricing;
@@ -1760,13 +1812,13 @@ if (luxuryMode) {
 } else {
   if (strongHintMatches.length >= 3) {
     priceSource = strongHintMatches;
-  } else if (italianTopForPricing.length >= 5) {
+  } else if (italianTopForPricing.length >= 3) {
     priceSource = italianTopForPricing;
   } else {
     priceSource = ebayOnly.length ? ebayOnly : italianTopForPricing;
   }
 }
-
+    
 console.log('ITALIAN TOP FOR PRICING COUNT:', italianTopForPricing.length);
 console.log('LUXURY MODE:', luxuryMode);
 console.log('PRICE SOURCE DOMAINS:', priceSource.map(it => domainOf(it.link)));
