@@ -1606,6 +1606,7 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
 
 const fallbackModelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
 const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
+    
 const fallbackQueries = fallbackLuxuryMode
   ? queries.filter(q => {
       const nq = norm(q);
@@ -1616,9 +1617,7 @@ const fallbackQueries = fallbackLuxuryMode
   : queries;
 
 console.log('MODEL MATCH TOKENS:', fallbackModelMatchTokens);
-console.log('FALLBACK QUERIES USED:', fallbackQueries);    
-    
-    
+console.log('FALLBACK QUERIES USED:', fallbackQueries);
 
 if (!merged.length) {
   for (const q of fallbackQueries) {
@@ -1644,6 +1643,27 @@ if (!merged.length) {
       break;
     }
   }
+  
+  if (!merged.length) {
+    const q = fallbackQueries[0] || queries[0];
+    let fb = [];
+    for (const site of siteList.slice(0, TOP_SITES)) {
+      try {
+        fb.push(...await serpSearch({ query: q, site, num: ENV.MAX_RESULTS_PER_SITE, hl, gl }));
+      } catch {}
+    }
+    if (includeShopping) {
+      try {
+        const shop = await serpShoppingGlobal({ query: q, num: 25, hl, gl });
+        fb.push(...shop.filter(it => !isBlacklisted(domainOf(it.link))));
+      } catch {}
+    }
+    merged = dedupeByLink(fb);
+    usedQuery = q;
+  }
+}    
+
+
 
   if (!merged.length) {
     const q = queries[0];
