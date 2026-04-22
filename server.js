@@ -118,6 +118,17 @@ const ENV = {
   STRICT_BRAND_DEFAULT: (process.env.STRICT_BRAND || 'true').toLowerCase() === 'true',
 };
 
+const ITALIAN_PRIMARY_DOMAINS = new Set([
+  'subito.it',
+  'vinted.it',
+  'ebay.it'
+]);
+
+const ITALY_ALLOWED_GLOBAL_DOMAINS = new Set([
+  'vestiairecollective.com',
+  'depop.com'
+]);
+
 // ===== CONFIG MARKETPLACES =====
 let MP = { countries: {}, continents: {}, blacklist_domains: [] };
 try {
@@ -206,7 +217,61 @@ function domainOf(urlStr) {
     return m ? m[1].replace(/^www\./,'') : '';
   }
 }
+function isItalianPricingResult(item = {}, siteList = []) {
+  const d = domainOf(item.link || '').replace(/^www\./, '');
+  const snippet = String(item.snippet || '').toLowerCase();
+  const title = String(item.title || '').toLowerCase();
+  const source = String(item.source || '').toLowerCase();
+  
+  const text = `${title} ${snippet}`;
+  
+  const allowedDomains = new Set(
+    (siteList || []).map(x => String(x || '').replace(/^www\./, ''))
+  );
+  
+  // Il dominio deve stare nella configurazione del mercato IT
+  if (!allowedDomains.has(d)) return false;
+  
+  // 1) Siti italiani puri: sempre ammessi
+  if (ITALIAN_PRIMARY_DOMAINS.has(d)) {
+    return true;
+  }
+  
+  // 2) Siti globali ammessi solo se whitelistati
+  if (!ITALY_ALLOWED_GLOBAL_DOMAINS.has(d)) {
+    return false;
+  }
+  
+  // 3) Il listing deve mostrare segnali Italia
+  const italySignals = [
 
+    'italia',
+    'italy',
+    'venditore italiano',
+    'seller italy',
+    'spedizione dall italia',
+    'spedizione da italia',
+    'from italy',
+    'made in italy'
+  ];
+
+  const hasItalySignal = italySignals.some(sig => text.includes(sig));
+
+  // 4) Il listing deve avere segnali di lingua italiana
+  
+  const italianLanguageSignals = [
+    'giacca', 'maglietta', 'felpa', 'scarpe', 'cappello',
+    'uomo', 'donna', 'usato', 'nuovo', 'ottime condizioni',
+    'taglia', 'colore', 'spedizione', 'venditore'
+  ];
+  const hasItalianLanguageSignal = italianLanguageSignals.some(sig => text.includes(sig));
+  
+  // 5) Caso speciale eBay: solo ebay.it
+  if (source.includes('ebay')) {
+    return d === 'ebay.it';
+  }
+  return hasItalySignal && hasItalianLanguageSignal;
+}
 // ===== GEMINI ANALYZE =====
 
 async function analyzeItemWithGemini(imageBase64) {
