@@ -1603,19 +1603,22 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
 }
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
-const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
 
+const fallbackModelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
+const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
 const fallbackQueries = fallbackLuxuryMode
   ? queries.filter(q => {
       const nq = norm(q);
       const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
-      const modelHits = modelMatchTokens.filter(tok => nq.includes(norm(tok))).length;
+      const modelHits = fallbackModelMatchTokens.filter(tok => nq.includes(norm(tok))).length;
       return hasBrand && modelHits >= 1;
     })
   : queries;
+
+console.log('MODEL MATCH TOKENS:', fallbackModelMatchTokens);
+console.log('FALLBACK QUERIES USED:', fallbackQueries);    
     
-console.log('MODEL MATCH TOKENS:', modelMatchTokens);
-console.log('FALLBACK QUERIES USED:', fallbackQueries);
+    
 
 if (!merged.length) {
   for (const q of fallbackQueries) {
@@ -1754,7 +1757,7 @@ if (isItalianMarket && italianTopForPricing.length < 3) {
   
   let italianFallback = [];
   
-  for (const q of queries) {
+  for (const q of fallbackQueries) {
     const step = [];
     
     for (const site of siteList.slice(0, TOP_SITES)) {
