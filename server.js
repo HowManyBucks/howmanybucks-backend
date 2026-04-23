@@ -1648,14 +1648,10 @@ let usedQuery = 'ebay_image_search';
 let dynamicHintSignals = [];
 
 try {
-  const ebayImageItems = await ebaySearchByImage(imageBase64, { limit: 20 });
-  const googleLensItems = [];
+ const ebayImageItems = [];
+ const googleLensItems = [];
 
-  const combined = [
-    ...ebayImageItems,
-    ...googleLensItems,
-  ];
-
+ const combined = [];
   merged = dedupeByLink(combined);
   topResults = merged.slice(0, 2);
 
@@ -1741,8 +1737,8 @@ console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
 console.log('DYNAMIC HINT SIGNALS:', dynamicHintSignals);
 console.log('AFTER HARD BRAND FILTER:', merged.length);
   
-console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
-console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
+console.log('EBAY IMAGE SEARCH RESULTS: DISABLED');
+console.log('GOOGLE LENS RESULTS: DISABLED');
 console.log('AFTER HARD BRAND FILTER:', merged.length);
   
 } catch (e) {
