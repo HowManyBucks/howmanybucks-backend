@@ -1969,6 +1969,7 @@ const contextScore = {
             await sleep(250);
           } catch {}
         }
+        
         const dedupedRaw = dedupeByLink(step);
 
         console.log('ITALIAN FALLBACK RAW COUNT:', step.length);
