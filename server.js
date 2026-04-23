@@ -1678,14 +1678,21 @@ merged = merged.filter(item => {
   const modelHits = countModelTokenMatches(text, modelMatchTokens);
   const hintHits = countSignalHits(text, softVisualHints);
 
+  // PRIORITÀ: non perdere dati
+
   if (brandOk && categoryOk) return true;
 
+  // luxury: leggermente meno rigido  
   if (fallbackLuxuryMode) {
-    return brandOk && (modelHits >= 1 || hintHits >= 1);
+    return brandOk || categoryOk || modelHits >= 1;
   }
 
-  return brandOk || categoryOk;
+  // fallback standard: basta categoria
+  return categoryOk;  
+  
 });
+
+console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
   
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
 console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
@@ -1702,7 +1709,7 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
     
-if (!merged.length) {
+if (!merged.length < 5) {
   for (const q of fallbackQueries) {
     const step = [];
     
