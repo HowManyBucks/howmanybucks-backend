@@ -302,18 +302,29 @@ function isItalianPricingResult(item = {}, siteList = []) {
   );
 
     
-  // Il dominio deve stare nella configurazione del mercato IT
-  if (!allowedDomains.has(d)) return false;
-  
-  // 1) Siti italiani puri: sempre ammessi
-  if (ITALIAN_PRIMARY_DOMAINS.has(d)) {
-    return true;
-  }
-  
-  // 2) Siti globali ammessi solo se whitelistati
-  if (!ITALY_ALLOWED_GLOBAL_DOMAINS.has(d)) {
+  if (!allowedDomains.has(d)) {
+    console.log('ITALIAN FILTER DROP - DOMAIN NOT ALLOWED:', d, '|', item.title);
     return false;
   }
+
+  if (ITALIAN_PRIMARY_DOMAINS.has(d)) {
+    console.log('ITALIAN FILTER PASS - PRIMARY DOMAIN:', d, '|', item.title);
+    return true;
+  }
+
+  if (!ITALY_ALLOWED_GLOBAL_DOMAINS.has(d)) {
+    console.log('ITALIAN FILTER DROP - GLOBAL DOMAIN NOT ALLOWED:', d, '|', item.title);
+    return false;
+  }
+
+  if (source.includes('ebay')) {
+    const pass = d === 'ebay.it';
+    console.log('ITALIAN FILTER EBAY CHECK:', d, '| pass =', pass, '|', item.title);
+    return pass;
+  }
+
+  console.log('ITALIAN FILTER PASS - GLOBAL WHITELIST:', d, '|', item.title);
+  return true;
   
   // 3) Il listing deve mostrare segnali Italia
   const italySignals = [
@@ -1770,6 +1781,11 @@ if (merged.length < 5) {
     }
     
     const deduped = dedupeByLink(step);
+    console.log('FALLBACK RAW COUNT:', step.length);
+    console.log('FALLBACK DEDUPED COUNT:', deduped.length);
+    console.log('FALLBACK SAMPLE TITLES:', deduped.slice(0, 10).map(x => x.title));
+    console.log('FALLBACK SAMPLE DOMAINS:', deduped.slice(0, 10).map(x => domainOf(x.link)));
+    
     const priced = deduped.filter(
       it => parseMoney(it.price_str || it.title || it.snippet) != null
     );
@@ -1838,6 +1854,20 @@ let visionValidation = null;
       return whiteSet.has(dn) || includeShopping;
     });
 
+    console.log('FILTERED WL SAMPLE:', filteredWL.slice(0, 10).map(x => ({
+      title: x.title,
+      domain: domainOf(x.link),
+      source: x.source,
+      price: x.price_str
+    })));
+
+    console.log('MERGED BEFORE ITALIAN FILTER SAMPLE:', merged.slice(0, 10).map(x => ({
+      title: x.title,
+      domain: domainOf(x.link),
+      source: x.source,
+      price: x.price_str
+    })));
+    
     console.log('ITALIAN PRICE FILTER ACTIVE:', isItalianMarket);
     console.log('AFTER ITALIAN MARKET FILTER:', filteredWL.length);
     console.log('ITALIAN MARKET DOMAINS:', uniqueDomains(filteredWL));
@@ -1939,8 +1969,14 @@ const contextScore = {
             await sleep(250);
           } catch {}
         }
+        const dedupedRaw = dedupeByLink(step);
 
-        const deduped = dedupeByLink(step)
+        console.log('ITALIAN FALLBACK RAW COUNT:', step.length);
+        console.log('ITALIAN FALLBACK DEDUPED COUNT:', dedupedRaw.length);
+        console.log('ITALIAN FALLBACK SAMPLE TITLES:', dedupedRaw.slice(0, 10).map(x => x.title));
+        console.log('ITALIAN FALLBACK SAMPLE DOMAINS:', dedupedRaw.slice(0, 10).map(x => domainOf(x.link)));
+
+        const deduped = dedupedRaw
           .filter(it => isItalianPricingResult(it, siteList))
           .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
 
