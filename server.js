@@ -341,7 +341,8 @@ function isItalianPricingResult(item = {}, siteList = []) {
   if (source.includes('ebay')) {
     return d === 'ebay.it';
   }
-  return hasItalySignal && hasItalianLanguageSignal;
+// per ora non bloccare i marketplace globali per lingua/geo nel listing
+  return true;
 }
 // ===== GEMINI ANALYZE =====
 
@@ -1684,7 +1685,7 @@ merged = merged.filter(item => {
 
   // luxury: leggermente meno rigido  
   if (fallbackLuxuryMode) {
-    return brandOk || categoryOk || modelHits >= 1;
+    return brandOk && (modelHits >= 1 || hintHits >= 1 || categoryOk);
   }
 
   // fallback standard: basta categoria
