@@ -253,12 +253,12 @@ function uniqueDomains(items = []) {
       .filter(Boolean)
   )];
 }
+
 function passesSiteClassFilter(item = {}, ctx = {}) {
   const {
     className = 'A',
     brand = '',
     brandResolved = '',
-    category = '',
     modelTokens = [],
     softVisualHints = [],
   } = ctx;
@@ -268,25 +268,26 @@ function passesSiteClassFilter(item = {}, ctx = {}) {
     ? (containsWord(text, brand) || containsWord(text, brandResolved))
     : true;
 
-  const categoryOk = matchesApparelCategory(text, category);
   const modelHits = countModelTokenMatches(text, modelTokens);
   const hintHits = countSignalHits(text, softVisualHints);
 
+  if (!brandOk) return false;
+
   if (className === 'A') {
-    return brandOk && categoryOk;
+    return true;
   }
 
   if (className === 'B') {
-    if (!brandOk) return false;
-    return categoryOk || modelHits >= 1 || hintHits >= 1;
+    return modelHits >= 1 || hintHits >= 1 || brandOk;
   }
   
   if (className === 'C') {
-    return brandOk || categoryOk;
+    return brandOk;
   }
   
-  return brandOk && categoryOk;
+  return brandOk;
 }
+
 
 function isItalianPricingResult(item = {}, siteList = []) {
   const d = domainOf(item.link || '').replace(/^www\./, '');
@@ -1732,27 +1733,29 @@ merged = merged.filter(item => {
   const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
   const hintHits = countSignalHits(text, softVisualHints);
 
-  // PRIORITÀ: match perfetto
-  if (brandOk && strongHits >= 1) return true;
+  // REGOLA MASTER: brand Gemini obbligatorio
+  if (!brandOk) return false;
 
-  // 🔵 CASO CRITICO: risultati da eBay image search
-  // NON bloccarli se il brand non è scritto nel titolo
+  // match forte modello
+  if (strongHits >= 1) return true;
+
+  // match medio: modello debole + hint visivo
+  if (weakHits >= 1 && hintHits >= 1) return true;
+
+  // caso eBay image search: brand già obbligatorio, basta un segnale utile
   if (isEbayImageSource) {
-    return strongHits >= 1 || weakHits >= 1 || hintHits >= 1;
+    return weakHits >= 1 || hintHits >= 1;
   }
 
-  // match medio
-  if (brandOk && weakHits >= 1 && hintHits >= 1) return true;
-
-  // luxury: più permissivo ma controllato
+  // luxury: brand obbligatorio + almeno un segnale utile
   if (fallbackLuxuryMode) {
-    return brandOk && (weakHits >= 1 || hintHits >= 1);
+    return weakHits >= 1 || hintHits >= 1;
   }
 
-  // fallback minimo: serve almeno il brand
-  return brandOk;
-});
-  
+  // fallback minimo: se ha il brand, passa
+  return true;
+});  
+ 
 console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
   
 console.log('MERGED SAMPLE SOURCES AFTER FILTER:', merged.slice(0,5).map(x => ({
@@ -1818,7 +1821,7 @@ if (merged.length < 5) {
     }
   }
 
-  if (merged.length) {
+  if (!merged.length) {
     const q = fallbackQueries[0] || queries[0];
     let fb = [];
 
@@ -1850,7 +1853,6 @@ if (merged.length < 5) {
     merged = dedupeByLink(fb);
     usedQuery = q;
   }
-}
     
 if (!topResults.length) {
   topResults = merged.slice(0, 2);
@@ -1908,7 +1910,7 @@ const contextScore = {
 
     const cleaned = filteredStrict.filter(it => {
       const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
-      return !isExcludedApparelResult(text) && matchesApparelCategory(text, finalCategory);
+      return !isExcludedApparelResult(text);
     });
 
     const ranked = [...cleaned]
@@ -1996,7 +1998,7 @@ const contextScore = {
             brand: finalBrand,
             brandResolved,
             category: finalCategory,
-            modelTokens: modelMatchTokens,
+            modelTokens: strongModelTokens
             softVisualHints
           })
         );
