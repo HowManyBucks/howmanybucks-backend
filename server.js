@@ -739,12 +739,6 @@ function buildCandidateQueries(form, vision) {
   return { queries, brandResolved };
 }
 
-  // LIVELLO 2 — marca + modello ridotto + categoria
-  if (formBrand && shortModel && catToken) {
-    Q.push(J(formBrand, shortModel, colorToken, catToken));
-    Q.push(J(formBrand, shortModel, catToken));
-  }
-
   // LIVELLO 3 — marca + categoria + colore
   if (formBrand && catToken) {
     Q.push(J(formBrand, colorToken, catToken));
@@ -768,7 +762,6 @@ function buildCandidateQueries(form, vision) {
   const brandResolved = formBrand || '';
   return { queries, brandResolved };
 }
-
 
 // ===== SERP HELPERS =====
 async function serpSearch({ query, site, num, hl='it', gl='it' }) {
