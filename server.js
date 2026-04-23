@@ -597,6 +597,62 @@ function extractCoreModelTerms(model = '', category = '') {
   return uniq(tokens).slice(0, 2);
 }
 
+function splitModelTokens(model = '', category = '') {
+  const categoryWords = new Set(
+    expandCategory(category)
+      .map(norm)
+      .flatMap(x => x.split(' ').filter(Boolean))
+  );
+
+  const weakWords = new Set([
+    ...Array.from(STOPWORDS),
+    ...Array.from(categoryWords),
+    'black', 'white', 'red', 'blue', 'green', 'brown', 'grey', 'gray',
+    'nero', 'bianco', 'rosso', 'blu', 'verde', 'marrone', 'grigio',
+    'jacket', 'coat', 'shirt', 'tee', 't-shirt', 'shoe', 'shoes',
+    'sneaker', 'sneakers', 'denim', 'giacca', 'maglietta', 'scarpa', 'scarpe',
+    'oversized', 'regular', 'slim', 'fit', 'washed', 'vintage', 'shadow'
+  ]);
+
+  const rawTokens = norm(model)
+    .split(' ')
+    .filter(Boolean)
+    .filter(t => t.length >= 3);
+
+  const strong = [];
+  const weak = [];
+
+  for (const t of rawTokens) {
+    if (/^[a-z]*\d+[a-z\d\-]*$/i.test(t)) {
+      strong.push(t);
+      continue;
+    }
+
+    if (weakWords.has(t)) {
+      continue;
+    }
+
+    if (
+      t === 'logo' ||
+      t === 'vlogo' ||
+      t === 'monogram' ||
+      t === 'jacquard' ||
+      t === 'iconographe'
+    ) {
+      strong.push(t);
+      continue;
+    }
+
+    weak.push(t);
+  }
+
+  return {
+    strong: uniq(strong).slice(0, 3),
+    weak: uniq(weak).slice(0, 3),
+  };
+}
+
+
 function extractSoftVisualHints(vision = {}) {
   const allowedHints = new Set([
     'denim', 'monogram', 'logo', 'jacquard', 'quilted', 'embroidered',
@@ -624,6 +680,13 @@ function countSignalHits(text = '', signals = []) {
 function countModelTokenMatches(text = '', modelTokens = []) {
   const t = norm(text);
   return (modelTokens || []).filter(tok => t.includes(norm(tok))).length;
+}
+
+function countStrongWeakModelHits(text = '', modelSignals = {}) {
+  const t = norm(text);
+  const strongHits = (modelSignals.strong || []).filter(tok => t.includes(norm(tok))).length;
+  const weakHits = (modelSignals.weak || []).filter(tok => t.includes(norm(tok))).length;
+  return { strongHits, weakHits };
 }
 
 function buildCandidateQueries(form, vision) {
@@ -1554,7 +1617,10 @@ console.log('QUERY INPUTS FINAL:', {
 });
 console.log('QUERIES BUILT:', queries);
 
-const modelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
+const modelSignals = splitModelTokens(finalModel, finalCategory);
+const strongModelTokens = modelSignals.strong;
+const weakModelTokens = modelSignals.weak;
+
 const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
 
 const fallbackQueries = fallbackLuxuryMode
@@ -1562,16 +1628,15 @@ const fallbackQueries = fallbackLuxuryMode
       const narrowed = queries.filter(q => {
         const nq = norm(q);
         const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
-        const modelHits = modelMatchTokens.filter(tok => nq.includes(norm(tok))).length;
-        return hasBrand && modelHits >= 1;
+        const strongHits = strongModelTokens.filter(tok => nq.includes(norm(tok))).length;
+        return hasBrand && strongHits >= 1;
       });
       return narrowed.length ? narrowed : queries;
     })()
   : queries;
 
-console.log('MODEL MATCH TOKENS:', modelMatchTokens);
-console.log('FALLBACK QUERIES USED:', fallbackQueries);    
-
+console.log('MODEL SIGNALS:', modelSignals);
+console.log('FALLBACK QUERIES USED:', fallbackQueries);
     
 // 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
@@ -1667,7 +1732,7 @@ dynamicHintSignals = buildVisualHintSignals(
   dynamicBrandSignals,
   dynamicCategorySignals
 );
-  
+
 merged = merged.filter(item => {
   const text = `${item.title || ''} ${item.snippet || ''}`;
 
@@ -1675,23 +1740,24 @@ merged = merged.filter(item => {
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
 
-  const categoryOk = matchesApparelCategory(text, finalCategory);
-  const modelHits = countModelTokenMatches(text, modelMatchTokens);
+  const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
   const hintHits = countSignalHits(text, softVisualHints);
 
-  // PRIORITÀ: non perdere dati
+  // HARD FILTER: il brand resta il vero filtro
+  if (!brandOk) return false;
 
-  if (brandOk && categoryOk) return true;
+  // match forte modello
+  if (strongHits >= 1) return true;
 
-  // luxury: leggermente meno rigido  
-  if (fallbackLuxuryMode) {
-    return brandOk && (modelHits >= 1 || hintHits >= 1 || categoryOk);
-  }
+  // match medio: modello debole + hint visivo
+  if (weakHits >= 1 && hintHits >= 1) return true;
 
-  // fallback standard: basta categoria
-  return categoryOk;  
-  
-});
+  // luxury: non perdere risultati utili
+  if (fallbackLuxuryMode && (weakHits >= 1 || hintHits >= 1)) return true;
+
+  // fallback finale: se ha brand, passa
+  return true;
+});  
 
 console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
   
@@ -1710,7 +1776,7 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
     
-if (!merged.length < 5) {
+if (merged.length < 5) {
   for (const q of fallbackQueries) {
     const step = [];
     
@@ -1829,16 +1895,16 @@ let visionValidation = null;
         : (onlyBrand.length >= 3 ? onlyBrand : filteredWL);
     }
 
-    const contextScore = {
-      brand: finalBrand,
-      model: finalModel,
-      gender,
-      color: finalColor,
-      category: finalCategory,
-      modelTokens: modelMatchTokens,
-      softVisualHints,
-      siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
-    };
+const contextScore = {
+  brand: finalBrand,
+  model: finalModel,
+  gender,
+  color: finalColor,
+  category: finalCategory,
+  modelTokens: [...strongModelTokens, ...weakModelTokens]
+  softVisualHints,
+  siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
+};
 
     const cleaned = filteredStrict.filter(it => {
       const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
@@ -1867,7 +1933,7 @@ let visionValidation = null;
         brand: finalBrand,
         brandResolved,
         category: finalCategory,
-        modelTokens: modelMatchTokens,
+        modelTokens: strongModelTokens,
         softVisualHints
       })
     );
@@ -1879,7 +1945,7 @@ let visionValidation = null;
         brand: finalBrand,
         brandResolved,
         category: finalCategory,
-        modelTokens: modelMatchTokens,
+        modelTokens:  [...strongModelTokens, ...weakModelTokens],
         softVisualHints
       })
     );
