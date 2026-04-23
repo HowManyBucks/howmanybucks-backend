@@ -1852,7 +1852,8 @@ if (merged.length < 5) {
     
     merged = dedupeByLink(fb);
     usedQuery = q;
-}
+  }
+}  
     
 if (!topResults.length) {
   topResults = merged.slice(0, 2);
