@@ -1672,46 +1672,34 @@ try {
 // === FILTRO QUALITÀ BASE ===
 
 merged = merged.filter(item => {
-  const text = `${item.title || ''} ${item.snippet || ''}`.toLowerCase();
+  const text = `${item.title || ''} ${item.snippet || ''}`;
 
-  // 1) Escludi accessori
-  const excludeKeywords = [
-    'poster', 'sticker', 'patch', 'keychain', 'mug',
-    'cup', 'toy', 'lego', 'figure', 'decal'
-  ];
-  if (excludeKeywords.some(k => text.includes(k))) return false;
+  const brandOk = finalBrand
+    ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
+    : true;
 
-  // 2) Deve contenere almeno un segnale clothing
-  const clothingKeywords = [
-  // TOP
-  'shirt', 't-shirt', 'tee', 'polo', 'top', 'tank', 'canotta',
+  const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
+  const hintHits = countSignalHits(text, softVisualHints);
+  const categoryOk = matchesApparelCategory(text, finalCategory);
 
-  // UPPER
-  'hoodie', 'sweatshirt', 'felpa', 'maglione', 'sweater', 'cardigan',
+  // REGOLA MASTER: il brand Gemini è obbligatorio
+  if (!brandOk) return false;
 
-  // OUTERWEAR
-  'jacket', 'coat', 'giacca', 'piumino', 'blazer',
+  // match forte modello
+  if (strongHits >= 1) return true;
 
-  // BOTTOM
-  'jeans', 'pants', 'trousers', 'pantaloni', 'shorts', 'gonna', 'skirt',
+  // match medio: modello debole + hint visivo
+  if (weakHits >= 1 && hintHits >= 1) return true;
 
-  // FULL BODY
-  'dress', 'vestito',
+  // fallback luxury: brand obbligatorio, poi basta un segnale utile
+  if (fallbackLuxuryMode && (weakHits >= 1 || hintHits >= 1 || categoryOk)) return true;
 
-  // SHOES
-  'shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers',
-  'trainer', 'trainers', 'running shoe', 'basketball shoe', 'skate shoe',
-  
-  // HEADWEAR
-  'hat', 'cap', 'cappello', 'cappellino', 'beanie', 'snapback', 'visor'
-  
-  ];
-  
-  const hasClothing = clothingKeywords.some(k => text.includes(k));
-  if (!hasClothing) return false;
-  return true;
+  // fallback standard: brand + categoria
+  return categoryOk;
 });
-// === FILTRO BRAND + CATEGORIA DINAMICO ===
+  
+  
+  // === FILTRO BRAND + CATEGORIA DINAMICO ===
 
 const dynamicBrandSignals = uniq([
   finalBrand,
@@ -1764,7 +1752,9 @@ merged = merged.filter(item => {
   // fallback minimo: serve almeno il brand
   return brandOk;
 });
-
+  
+console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
+  
 console.log('MERGED SAMPLE SOURCES AFTER FILTER:', merged.slice(0,5).map(x => ({
   title: x.title,
   source: x.source,
