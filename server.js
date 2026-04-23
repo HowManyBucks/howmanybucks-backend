@@ -738,31 +738,7 @@ function buildCandidateQueries(form, vision) {
 
   return { queries, brandResolved };
 }
-
-  // LIVELLO 3 — marca + categoria + colore
-  if (formBrand && catToken) {
-    Q.push(J(formBrand, colorToken, catToken));
-    Q.push(J(formBrand, catToken));
-  }
-
-  // LIVELLO 4 — marca sola
-  if (formBrand) {
-    Q.push(J(formBrand));
-  }
-
-  // LIVELLO 5 — categoria + colore
-  if (catToken) {
-    Q.push(J(colorToken, catToken));
-    Q.push(J(catToken));
-  }
-  
-  if (!Q.length) Q.push('t-shirt');
-  
-  const queries = uniq(Q).filter(q => q.split(' ').length >= 1);
-  const brandResolved = formBrand || '';
-  return { queries, brandResolved };
-}
-
+ 
 // ===== SERP HELPERS =====
 async function serpSearch({ query, site, num, hl='it', gl='it' }) {
   const params = new URLSearchParams({
