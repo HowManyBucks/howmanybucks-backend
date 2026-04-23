@@ -1658,6 +1658,28 @@ try {
 
   merged = dedupeByLink(combined);
   topResults = merged.slice(0, 2);
+
+  console.log('EBAY RAW SAMPLE BEFORE FILTER:', merged.slice(0, 5).map(item => {
+    const text = `${item.title || ''} ${item.snippet || ''}`;
+
+    const brandOk = finalBrand
+      ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
+      : true;
+
+    const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
+    const hintHits = countSignalHits(text, softVisualHints);
+
+    return {
+      title: item.title,
+      snippet: item.snippet,
+      brandOk,
+      strongHits,
+      weakHits,
+      hintHits,
+      source: item.source,
+      domain: domainOf(item.link)
+    };
+  }));
   
   if (topResults.length >= 2) {
     top2Match = titlesMatchTop2(
@@ -1679,27 +1701,8 @@ merged = merged.filter(item => {
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
 
-  const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
-  const hintHits = countSignalHits(text, softVisualHints);
-
-  // REGOLA MASTER: il brand Gemini è obbligatorio
-  if (!brandOk) return false;
-
-  // match forte modello
-  if (strongHits >= 1) return true;
-
-  // match medio: modello debole + hint visivo
-  if (weakHits >= 1 && hintHits >= 1) return true;
-
-  // fallback luxury: brand obbligatorio + almeno un segnale utile
-  if (fallbackLuxuryMode) {
-    return weakHits >= 1 || hintHits >= 1;
-  }
-
-  // fallback minimo: se ha solo il brand, passa
-  return true;
+  return brandOk;
 });
-  
   
   // === FILTRO BRAND + CATEGORIA DINAMICO ===
 
@@ -1723,39 +1726,7 @@ dynamicHintSignals = buildVisualHintSignals(
   dynamicCategorySignals
 );
 
-merged = merged.filter(item => {
-  const text = `${item.title || ''} ${item.snippet || ''}`;
-  const isEbayImageSource = String(item.source || '') === 'ebay_image_search';
-
-  const brandOk = finalBrand
-    ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
-    : true;
-
-  const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
-  const hintHits = countSignalHits(text, softVisualHints);
-
-  // REGOLA MASTER: brand Gemini obbligatorio
-  if (!brandOk) return false;
-
-  // match forte modello
-  if (strongHits >= 1) return true;
-
-  // match medio: modello debole + hint visivo
-  if (weakHits >= 1 && hintHits >= 1) return true;
-
-  // caso eBay image search: brand già obbligatorio, basta un segnale utile
-  if (isEbayImageSource) {
-    return weakHits >= 1 || hintHits >= 1;
-  }
-
-  // luxury: brand obbligatorio + almeno un segnale utile
-  if (fallbackLuxuryMode) {
-    return weakHits >= 1 || hintHits >= 1;
-  }
-
-  // fallback minimo: se ha il brand, passa
-  return true;
-});  
+1 
  
 console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
   
