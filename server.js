@@ -280,11 +280,11 @@ function passesSiteClassFilter(item = {}, ctx = {}) {
   if (className === 'B') {
     return modelHits >= 1 || hintHits >= 1 || brandOk;
   }
-  
+
   if (className === 'C') {
     return brandOk;
   }
-  
+
   return brandOk;
 }
 
@@ -1681,7 +1681,6 @@ merged = merged.filter(item => {
 
   const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
   const hintHits = countSignalHits(text, softVisualHints);
-  const categoryOk = matchesApparelCategory(text, finalCategory);
 
   // REGOLA MASTER: il brand Gemini è obbligatorio
   if (!brandOk) return false;
@@ -1692,11 +1691,13 @@ merged = merged.filter(item => {
   // match medio: modello debole + hint visivo
   if (weakHits >= 1 && hintHits >= 1) return true;
 
-  // fallback luxury: brand obbligatorio, poi basta un segnale utile
-  if (fallbackLuxuryMode && (weakHits >= 1 || hintHits >= 1 || categoryOk)) return true;
+  // fallback luxury: brand obbligatorio + almeno un segnale utile
+  if (fallbackLuxuryMode) {
+    return weakHits >= 1 || hintHits >= 1;
+  }
 
-  // fallback standard: brand + categoria
-  return categoryOk;
+  // fallback minimo: se ha solo il brand, passa
+  return true;
 });
   
   
@@ -1767,11 +1768,11 @@ console.log('MERGED SAMPLE SOURCES AFTER FILTER:', merged.slice(0,5).map(x => ({
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
 console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
 console.log('DYNAMIC HINT SIGNALS:', dynamicHintSignals);
-console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
+console.log('AFTER HARD BRAND FILTER:', merged.length);
   
 console.log('EBAY IMAGE SEARCH RESULTS:', ebayImageItems.length);
 console.log('GOOGLE LENS RESULTS:', googleLensItems.length);
-console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
+console.log('AFTER HARD BRAND FILTER:', merged.length);
   
 } catch (e) {
   console.warn('IMAGE SEARCH COMBINED FAILED:', e.message);
