@@ -691,29 +691,53 @@ function countStrongWeakModelHits(text = '', modelSignals = {}) {
 }
 
 function buildCandidateQueries(form, vision) {
-  const formBrand  = form.brand ? norm(form.brand) : '';
-  const formModel  = form.model ? String(form.model).trim() : '';
-  const formCat    = form.category ? expandCategory(form.category).map(norm) : [];
-  const formPat    = form.pattern ? expandPattern(form.pattern).map(norm) : [];
-  const formGender = form.gender ? norm(form.gender) : '';
-  const formColor  = form.color ? norm(form.color) : '';
+  const formBrand = form.brand ? norm(form.brand) : '';
+  const formModel = form.model ? String(form.model).trim() : '';
+  const formCat = form.category ? expandCategory(form.category).map(norm) : [];
+  const formColor = form.color ? norm(form.color) : '';
 
   const catToken = formCat[0] || '';
-  const patToken = formPat[0] || '';
   const colorToken = formColor || '';
 
-  const coreModelTerms = extractCoreModelTerms(formModel, catToken);
-  const shortModel = coreModelTerms.join(' ');
+  const modelSignals = splitModelTokens(formModel, catToken);
+  const strongModel = (modelSignals.strong || []).join(' ');
+  const weakModel = (modelSignals.weak || []).join(' ');
 
   const J = (...parts) => norm(parts.filter(Boolean).join(' '));
   const Q = [];
 
-  // LIVELLO 1 — marca + modello completo + colore + categoria
-
-  if (formBrand && formModel && catToken) {
-    Q.push(J(formBrand, formModel, colorToken, catToken));
-    Q.push(J(formBrand, formModel, catToken));
+  if (formBrand && strongModel && catToken) {
+    Q.push(J(formBrand, strongModel, catToken));
+    Q.push(J(formBrand, strongModel, colorToken, catToken));
   }
+
+  if (formBrand && weakModel && catToken) {
+    Q.push(J(formBrand, weakModel, catToken));
+    Q.push(J(formBrand, weakModel, colorToken, catToken));
+  }
+
+  if (formBrand && catToken) {
+    Q.push(J(formBrand, catToken));
+    Q.push(J(formBrand, colorToken, catToken));
+  }
+
+  if (formBrand && strongModel) {
+    Q.push(J(formBrand, strongModel));
+  }
+
+  if (formBrand && weakModel) {
+    Q.push(J(formBrand, weakModel));
+  }
+
+  if (formBrand) {
+    Q.push(J(formBrand));
+  }
+
+  const queries = uniq(Q).filter(Boolean);
+  const brandResolved = formBrand || '';
+
+  return { queries, brandResolved };
+}
 
   // LIVELLO 2 — marca + modello ridotto + categoria
   if (formBrand && shortModel && catToken) {
@@ -1624,18 +1648,17 @@ const weakModelTokens = modelSignals.weak;
 
 const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
 
-const fallbackQueries = fallbackLuxuryMode
-  ? (() => {
-      const narrowed = queries.filter(q => {
-        const nq = norm(q);
-        const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
-        const strongHits = strongModelTokens.filter(tok => nq.includes(norm(tok))).length;
-        return hasBrand && strongHits >= 1;
-      });
-      return narrowed.length ? narrowed : queries;
-    })()
-  : queries;
+const fallbackQueries = (() => {
+  const brandNorm = norm(finalBrand);
 
+  const narrowed = queries.filter(q => {
+    const nq = norm(q);
+    return brandNorm ? nq.includes(brandNorm) : false;
+  });
+
+  return narrowed.length ? narrowed : queries;
+})();
+    
 console.log('MODEL SIGNALS:', modelSignals);
 console.log('FALLBACK QUERIES USED:', fallbackQueries);
     
@@ -1697,7 +1720,9 @@ merged = merged.filter(item => {
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
 
-  return brandOk;
+  if (!brandOk) return false;
+
+  return true;
 });
   
   // === FILTRO BRAND + CATEGORIA DINAMICO ===
@@ -1721,8 +1746,6 @@ dynamicHintSignals = buildVisualHintSignals(
   dynamicBrandSignals,
   dynamicCategorySignals
 );
-
-1 
  
 console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
   
