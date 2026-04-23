@@ -1735,6 +1735,7 @@ dynamicHintSignals = buildVisualHintSignals(
 
 merged = merged.filter(item => {
   const text = `${item.title || ''} ${item.snippet || ''}`;
+  const isEbayImageSource = String(item.source || '') === 'ebay_image_search';
 
   const brandOk = finalBrand
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
@@ -1743,23 +1744,32 @@ merged = merged.filter(item => {
   const { strongHits, weakHits } = countStrongWeakModelHits(text, modelSignals);
   const hintHits = countSignalHits(text, softVisualHints);
 
-  // HARD FILTER: il brand resta il vero filtro
-  if (!brandOk) return false;
+  // PRIORITÀ: match perfetto
+  if (brandOk && strongHits >= 1) return true;
 
-  // match forte modello
-  if (strongHits >= 1) return true;
+  // 🔵 CASO CRITICO: risultati da eBay image search
+  // NON bloccarli se il brand non è scritto nel titolo
+  if (isEbayImageSource) {
+    return strongHits >= 1 || weakHits >= 1 || hintHits >= 1;
+  }
 
-  // match medio: modello debole + hint visivo
-  if (weakHits >= 1 && hintHits >= 1) return true;
+  // match medio
+  if (brandOk && weakHits >= 1 && hintHits >= 1) return true;
 
-  // luxury: non perdere risultati utili
-  if (fallbackLuxuryMode && (weakHits >= 1 || hintHits >= 1)) return true;
+  // luxury: più permissivo ma controllato
+  if (fallbackLuxuryMode) {
+    return brandOk && (weakHits >= 1 || hintHits >= 1);
+  }
 
-  // fallback finale: se ha brand, passa
-  return true;
-});  
+  // fallback minimo: serve almeno il brand
+  return brandOk;
+});
 
-console.log('MERGED SAMPLE AFTER FILTER:', merged.slice(0,5).map(x => x.title));
+console.log('MERGED SAMPLE SOURCES AFTER FILTER:', merged.slice(0,5).map(x => ({
+  title: x.title,
+  source: x.source,
+  domain: domainOf(x.link)
+})));
   
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
 console.log('DYNAMIC CATEGORY SIGNALS:', dynamicCategorySignals);
