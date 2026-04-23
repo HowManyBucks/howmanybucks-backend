@@ -1901,7 +1901,7 @@ const contextScore = {
   gender,
   color: finalColor,
   category: finalCategory,
-  modelTokens: [...strongModelTokens, ...weakModelTokens]
+  modelTokens: [...strongModelTokens, ...weakModelTokens],
   softVisualHints,
   siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
 };
