@@ -217,19 +217,8 @@ function domainOf(urlStr) {
     return m ? m[1].replace(/^www\./,'') : '';
   }
 }
-function isItalianPricingResult(item = {}, siteList = []) {
-  const d = domainOf(item.link || '').replace(/^www\./, '');
-  const snippet = String(item.snippet || '').toLowerCase();
-  const title = String(item.title || '').toLowerCase();
-  const source = String(item.source || '').toLowerCase();
-  
-  const text = `${title} ${snippet}`;
-  
-  const allowedDomains = new Set(
-    (siteList || []).map(x => String(x || '').replace(/^www\./, ''))
-  );
 
-  const RETAIL_CONTEXT_DOMAINS = new Set([
+const RETAIL_CONTEXT_DOMAINS = new Set([
   'farfetch.com',
   'yoox.com',
   'luisaviaroma.com'
@@ -265,7 +254,6 @@ function uniqueDomains(items = []) {
   )];
 }
 function passesSiteClassFilter(item = {}, ctx = {}) {
-
   const {
     className = 'A',
     brand = '',
@@ -299,7 +287,20 @@ function passesSiteClassFilter(item = {}, ctx = {}) {
   
   return brandOk && categoryOk;
 }
+
+function isItalianPricingResult(item = {}, siteList = []) {
+  const d = domainOf(item.link || '').replace(/^www\./, '');
+  const snippet = String(item.snippet || '').toLowerCase();
+  const title = String(item.title || '').toLowerCase();
+  const source = String(item.source || '').toLowerCase();
   
+  const text = `${title} ${snippet}`;
+  
+  const allowedDomains = new Set(
+    (siteList || []).map(x => String(x || '').replace(/^www\./, ''))
+  );
+
+    
   // Il dominio deve stare nella configurazione del mercato IT
   if (!allowedDomains.has(d)) return false;
   
@@ -315,7 +316,6 @@ function passesSiteClassFilter(item = {}, ctx = {}) {
   
   // 3) Il listing deve mostrare segnali Italia
   const italySignals = [
-
     'italia',
     'italy',
     'venditore italiano',
