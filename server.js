@@ -1852,7 +1852,7 @@ if (merged.length < 5) {
     
     merged = dedupeByLink(fb);
     usedQuery = q;
-  }
+}
     
 if (!topResults.length) {
   topResults = merged.slice(0, 2);
@@ -1942,12 +1942,12 @@ const contextScore = {
 
     const classBRaw = topForPricing.filter(it =>
       isClassBResult(it) &&
-      passesSiteClassFilter(it, {
+        passesSiteClassFilter(it, {
         className: 'B',
         brand: finalBrand,
         brandResolved,
         category: finalCategory,
-        modelTokens:  [...strongModelTokens, ...weakModelTokens],
+        modelTokens: [...strongModelTokens, ...weakModelTokens],
         softVisualHints
       })
     );
@@ -1998,7 +1998,7 @@ const contextScore = {
             brand: finalBrand,
             brandResolved,
             category: finalCategory,
-            modelTokens: strongModelTokens
+            modelTokens: strongModelTokens,
             softVisualHints
           })
         );
@@ -2010,7 +2010,7 @@ const contextScore = {
             brand: finalBrand,
             brandResolved,
             category: finalCategory,
-            modelTokens: modelMatchTokens,
+            modelTokens: [...strongModelTokens, ...weakModelTokens],
             softVisualHints
           })
         );
