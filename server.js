@@ -1648,7 +1648,7 @@ let dynamicHintSignals = [];
 
 try {
   const ebayImageItems = await ebaySearchByImage(imageBase64, { limit: 20 });
-  const googleLensItems = await searchWithGoogleLens(tempImageUrl);
+  const googleLensItems = [];
 
   const combined = [
     ...ebayImageItems,
@@ -1818,7 +1818,7 @@ if (merged.length < 5) {
     }
   }
 
-  if (!merged.length) {
+  if (merged.length) {
     const q = fallbackQueries[0] || queries[0];
     let fb = [];
 
