@@ -228,6 +228,77 @@ function isItalianPricingResult(item = {}, siteList = []) {
   const allowedDomains = new Set(
     (siteList || []).map(x => String(x || '').replace(/^www\./, ''))
   );
+
+  const RETAIL_CONTEXT_DOMAINS = new Set([
+  'farfetch.com',
+  'yoox.com',
+  'luisaviaroma.com'
+
+]);
+
+function getSiteClassFromDomain(domain = '') {
+  const d = String(domain || '').replace(/^www\./, '').toLowerCase();
+
+  if (ITALIAN_PRIMARY_DOMAINS.has(d)) return 'A';
+  if (ITALY_ALLOWED_GLOBAL_DOMAINS.has(d)) return 'B';
+  if (RETAIL_CONTEXT_DOMAINS.has(d)) return 'C';
+  return 'B';
+}
+
+function isClassAResult(item = {}) {
+  return getSiteClassFromDomain(domainOf(item.link || '')) === 'A';
+}
+
+function isClassBResult(item = {}) {
+  return getSiteClassFromDomain(domainOf(item.link || '')) === 'B';
+}
+
+function isClassCResult(item = {}) {
+  return getSiteClassFromDomain(domainOf(item.link || '')) === 'C';
+}
+
+function uniqueDomains(items = []) {
+  return [...new Set(
+    (items || [])
+      .map(it => domainOf(it.link || ''))
+      .filter(Boolean)
+  )];
+}
+function passesSiteClassFilter(item = {}, ctx = {}) {
+
+  const {
+    className = 'A',
+    brand = '',
+    brandResolved = '',
+    category = '',
+    modelTokens = [],
+    softVisualHints = [],
+  } = ctx;
+
+  const text = `${item.title || ''} ${item.snippet || ''}`;
+  const brandOk = brand
+    ? (containsWord(text, brand) || containsWord(text, brandResolved))
+    : true;
+
+  const categoryOk = matchesApparelCategory(text, category);
+  const modelHits = countModelTokenMatches(text, modelTokens);
+  const hintHits = countSignalHits(text, softVisualHints);
+
+  if (className === 'A') {
+    return brandOk && categoryOk;
+  }
+
+  if (className === 'B') {
+    if (!brandOk) return false;
+    return categoryOk || modelHits >= 1 || hintHits >= 1;
+  }
+  
+  if (className === 'C') {
+    return brandOk || categoryOk;
+  }
+  
+  return brandOk && categoryOk;
+}
   
   // Il dominio deve stare nella configurazione del mercato IT
   if (!allowedDomains.has(d)) return false;
@@ -1482,6 +1553,25 @@ console.log('QUERY INPUTS FINAL:', {
 });
 console.log('QUERIES BUILT:', queries);
 
+const modelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
+const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
+
+const fallbackQueries = fallbackLuxuryMode
+  ? (() => {
+      const narrowed = queries.filter(q => {
+        const nq = norm(q);
+        const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
+        const modelHits = modelMatchTokens.filter(tok => nq.includes(norm(tok))).length;
+        return hasBrand && modelHits >= 1;
+      });
+      return narrowed.length ? narrowed : queries;
+    })()
+  : queries;
+
+console.log('MODEL MATCH TOKENS:', modelMatchTokens);
+console.log('FALLBACK QUERIES USED:', fallbackQueries);    
+
+    
 // 1) Prima prova vera image-search eBay + Google Lens
 let merged = [];
 let topResults = [];
@@ -1579,14 +1669,22 @@ dynamicHintSignals = buildVisualHintSignals(
   
 merged = merged.filter(item => {
   const text = `${item.title || ''} ${item.snippet || ''}`;
-  
+
   const brandOk = finalBrand
     ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
     : true;
-  
+
   const categoryOk = matchesApparelCategory(text, finalCategory);
-  
-  return brandOk && categoryOk;
+  const modelHits = countModelTokenMatches(text, modelMatchTokens);
+  const hintHits = countSignalHits(text, softVisualHints);
+
+  if (brandOk && categoryOk) return true;
+
+  if (fallbackLuxuryMode) {
+    return brandOk && (modelHits >= 1 || hintHits >= 1);
+  }
+
+  return brandOk || categoryOk;
 });
   
 console.log('DYNAMIC BRAND SIGNALS:', dynamicBrandSignals);
@@ -1603,20 +1701,6 @@ console.log('AFTER HARD BRAND+CATEGORY FILTER:', merged.length);
 }
     
 // 2) Se eBay non basta, fallback al vecchio sistema testuale
-const fallbackModelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
-const fallbackLuxuryMode = isLuxuryBrand(finalBrand);
-    
-const fallbackQueries = fallbackLuxuryMode
-  ? queries.filter(q => {
-      const nq = norm(q);
-      const hasBrand = finalBrand ? nq.includes(norm(finalBrand)) : false;
-      const modelHits = fallbackModelMatchTokens.filter(tok => nq.includes(norm(tok))).length;
-      return hasBrand && modelHits >= 1;
-    })
-  : queries;
-    
-console.log('MODEL MATCH TOKENS:', fallbackModelMatchTokens);
-console.log('FALLBACK QUERIES USED:', fallbackQueries);
     
 if (!merged.length) {
   for (const q of fallbackQueries) {
@@ -1699,47 +1783,43 @@ if (!topResults.length) {
 }
     
 let visionValidation = null;    
-    
-   // Whitelist + blacklist
 
-const whiteSet = new Set(siteList.map(s => s.replace(/^www\./, '')));
-const isItalianMarket = (country || ENV.PRICE_COUNTRY) === 'IT';
-    
-const filteredWL = merged.filter(it => {
-  const d = domainOf(it.link);
-  if (!d) return false;
-  if (isBlacklisted(d)) return false;
-  
-  if (isItalianMarket) {
-    return isItalianPricingResult(it, siteList);
-  }
-  
-  const dn = d.replace(/^www\./, '');
-  return whiteSet.has(dn) || includeShopping;
-});
-    
-console.log('ITALIAN PRICE FILTER ACTIVE:', isItalianMarket);
-console.log('AFTER ITALIAN MARKET FILTER:', filteredWL.length);
-console.log('ITALIAN MARKET DOMAINS:', filteredWL.map(it => domainOf(it.link)));
-    
-    /// Hard filter brand
+    // Whitelist + blacklist
+    const whiteSet = new Set(siteList.map(s => s.replace(/^www\./, '')));
+    const isItalianMarket = (country || ENV.PRICE_COUNTRY) === 'IT';
+
+    const filteredWL = merged.filter(it => {
+      const d = domainOf(it.link);
+      if (!d) return false;
+      if (isBlacklisted(d)) return false;
+
+      if (isItalianMarket) {
+        return isItalianPricingResult(it, siteList);
+      }
+
+      const dn = d.replace(/^www\./, '');
+      return whiteSet.has(dn) || includeShopping;
+    });
+
+    console.log('ITALIAN PRICE FILTER ACTIVE:', isItalianMarket);
+    console.log('AFTER ITALIAN MARKET FILTER:', filteredWL.length);
+    console.log('ITALIAN MARKET DOMAINS:', uniqueDomains(filteredWL));
+
     const strictBrand = strictBrandFromClient === null
       ? ENV.STRICT_BRAND_DEFAULT
       : !!strictBrandFromClient;
 
-   let filteredStrict = filteredWL;
-   if (finalBrand) {
-     const onlyBrand = filteredWL.filter(it => {
-      const hay = `${it.title || ''} ${it.snippet || ''}`;
-      return containsWord(hay, finalBrand) || containsWord(hay, brandResolved);
-    });
-    filteredStrict = strictBrand
-      ? (onlyBrand.length ? onlyBrand : filteredWL)
-      : (onlyBrand.length >= 6 ? onlyBrand : filteredWL);
-    }
+    let filteredStrict = filteredWL;
+    if (finalBrand) {
+      const onlyBrand = filteredWL.filter(it => {
+        const hay = `${it.title || ''} ${it.snippet || ''}`;
+        return containsWord(hay, finalBrand) || containsWord(hay, brandResolved);
+      });
 
-    // Ranking
-    const modelMatchTokens = extractCoreModelTerms(finalModel, finalCategory);
+      filteredStrict = strictBrand
+        ? (onlyBrand.length ? onlyBrand : filteredWL)
+        : (onlyBrand.length >= 3 ? onlyBrand : filteredWL);
+    }
 
     const contextScore = {
       brand: finalBrand,
@@ -1751,137 +1831,141 @@ console.log('ITALIAN MARKET DOMAINS:', filteredWL.map(it => domainOf(it.link)));
       softVisualHints,
       siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
     };
-    
+
     const cleaned = filteredStrict.filter(it => {
       const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
       return !isExcludedApparelResult(text) && matchesApparelCategory(text, finalCategory);
     });
 
-    const ranked = [...cleaned].map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
-      .sort((a,b) => b._score - a._score);
+    const ranked = [...cleaned]
+      .map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
+      .sort((a, b) => b._score - a._score);
 
-    // Prezzi
     let TOP_N = 40;
+    if (ranked.length > 40 && ranked.length < 80) TOP_N = 60;
+    if (ranked.length >= 80) TOP_N = 80;
 
-    // fallback: se dopo i filtri restano pochi risultati, usa più elementi
-    if (ranked.length > 40 && ranked.length < 80) {
-      TOP_N = 60;
+    const topForPricing = ranked.slice(0, TOP_N);
+
+    console.log('TOP_N USATO:', TOP_N);
+    console.log('RANKED COUNT:', ranked.length);
+
+    const luxuryMode = isLuxuryBrand(finalBrand);
+
+    const classARaw = topForPricing.filter(it =>
+      isClassAResult(it) &&
+      passesSiteClassFilter(it, {
+        className: 'A',
+        brand: finalBrand,
+        brandResolved,
+        category: finalCategory,
+        modelTokens: modelMatchTokens,
+        softVisualHints
+      })
+    );
+
+    const classBRaw = topForPricing.filter(it =>
+      isClassBResult(it) &&
+      passesSiteClassFilter(it, {
+        className: 'B',
+        brand: finalBrand,
+        brandResolved,
+        category: finalCategory,
+        modelTokens: modelMatchTokens,
+        softVisualHints
+      })
+    );
+
+    const classCRaw = topForPricing.filter(it => isClassCResult(it));
+
+    let classAForPricing = classARaw;
+    let classBForPricing = classBRaw;
+
+    if (isItalianMarket && classAForPricing.length < 3) {
+      console.log('ITALIAN FALLBACK SEARCH ACTIVATED');
+
+      let italianFallback = [];
+
+      for (const q of fallbackQueries) {
+        const step = [];
+
+        for (const site of siteList.slice(0, TOP_SITES)) {
+          try {
+            const r = await serpSearch({
+              query: q,
+              site,
+              num: ENV.MAX_RESULTS_PER_SITE,
+              hl,
+              gl
+            });
+            step.push(...r);
+            await sleep(250);
+          } catch {}
+        }
+
+        const deduped = dedupeByLink(step)
+          .filter(it => isItalianPricingResult(it, siteList))
+          .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
+
+        if (deduped.length) {
+          italianFallback = deduped;
+          usedQuery = q;
+          break;
+        }
+      }
+
+      if (italianFallback.length) {
+        classAForPricing = italianFallback.filter(it =>
+          isClassAResult(it) &&
+          passesSiteClassFilter(it, {
+            className: 'A',
+            brand: finalBrand,
+            brandResolved,
+            category: finalCategory,
+            modelTokens: modelMatchTokens,
+            softVisualHints
+          })
+        );
+
+        classBForPricing = italianFallback.filter(it =>
+          isClassBResult(it) &&
+          passesSiteClassFilter(it, {
+            className: 'B',
+            brand: finalBrand,
+            brandResolved,
+            category: finalCategory,
+            modelTokens: modelMatchTokens,
+            softVisualHints
+          })
+        );
+      }
     }
-    if (ranked.length >= 80) {
-      TOP_N = 80;
+
+    let priceSource = classAForPricing;
+
+    if (priceSource.length < 3) {
+      priceSource = dedupeByLink([...classAForPricing, ...classBForPricing]);
     }
 
-const topForPricing = ranked.slice(0, TOP_N);
-console.log('TOP_N USATO:', TOP_N);
-console.log('RANKED COUNT:', ranked.length);
+    const ebayOnly = priceSource.filter(it =>
+      String(it.source || '').includes('ebay')
+    );
 
-const luxuryMode = isLuxuryBrand(finalBrand);
+    const strongHintMatches = priceSource.filter(it => {
+      const text = norm(`${it.title || ''} ${it.snippet || ''}`);
+      const hitCount = dynamicHintSignals.filter(h => text.includes(h)).length;
+      return hitCount >= 2;
+    });
 
-let italianTopForPricing = isItalianMarket
-  ? topForPricing.filter(it => isItalianPricingResult(it, siteList))
-  : topForPricing;
-
-// FALLBACK FORTE: se il filtro Italia da image search non basta,
-// usa ricerca testuale sui siti italiani configurati
-if (isItalianMarket && italianTopForPricing.length < 3) {
-  console.log('ITALIAN FALLBACK SEARCH ACTIVATED');
-  
-  let italianFallback = [];
-  
-  for (const q of fallbackQueries) {
-    const step = [];
-    
-    for (const site of siteList.slice(0, TOP_SITES)) {
-      try {
-        const r = await serpSearch({
-          query: q,
-          site,
-          num: ENV.MAX_RESULTS_PER_SITE,
-          hl,
-          gl
-        });
-        step.push(...r);
-        await sleep(250);
-      } catch (e) {}
-    }
-    
-const deduped = dedupeByLink(step)
-  .filter(it => isItalianPricingResult(it, siteList))
-  .filter(it => {
-    const text = `${it.title || ''} ${it.snippet || ''}`;
-    const brandOk = finalBrand
-      ? (containsWord(text, finalBrand) || containsWord(text, brandResolved))
-      : true;
-    const categoryOk = matchesApparelCategory(text, finalCategory);
-    
-    const modelHits = countModelTokenMatches(text, modelMatchTokens);
-
-    // luxury: richiedi almeno 1 token modello
-    if (luxuryMode) {
-      return brandOk && categoryOk && modelHits >= 1;
-    }
-    
-    return brandOk && categoryOk;
-  })
-  .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
-
-    if (deduped.length >= 3) {
-      italianFallback = deduped;
-      usedQuery = q;
-      break;
+    if (!luxuryMode && strongHintMatches.length >= 3) {
+      priceSource = strongHintMatches;
     }
 
-    if (!italianFallback.length && deduped.length) {
-      italianFallback = deduped;
-      usedQuery = q;
-    }
-  }
-
-  if (italianFallback.length) {
-    italianTopForPricing = italianFallback;
-  }
-}
-
-const ebayOnly = italianTopForPricing.filter(it =>
-  String(it.source || '').includes('ebay')
-);
-
-const strongHintMatches = italianTopForPricing.filter(it => {
-  const text = norm(`${it.title || ''} ${it.snippet || ''}`);
-  const hitCount = dynamicHintSignals.filter(h => text.includes(h)).length;
-  return hitCount >= 2
-});
-
-let priceSource = italianTopForPricing;
-
-if (luxuryMode) {
-  const nonEbayPriced = italianTopForPricing.filter(it =>
-    !String(it.source || '').includes('ebay') &&
-    parseMoney(it.price_str || it.title || it.snippet) != null
-  );
-
-  if (strongHintMatches.length >= 3) {
-    priceSource = strongHintMatches;
-  } else if (nonEbayPriced.length >= 3) {
-    priceSource = nonEbayPriced;
-  } else if (italianTopForPricing.length >= 3) {
-    priceSource = italianTopForPricing;
-  } else {
-    priceSource = ebayOnly.length ? ebayOnly : italianTopForPricing;
-  }
-} else {
-  if (strongHintMatches.length >= 3) {
-    priceSource = strongHintMatches;
-  } else if (italianTopForPricing.length >= 3) {
-    priceSource = italianTopForPricing;
-  } else {
-    priceSource = ebayOnly.length ? ebayOnly : italianTopForPricing;
-  }
-}
-    
-console.log('ITALIAN TOP FOR PRICING COUNT:', italianTopForPricing.length);
-console.log('LUXURY MODE:', luxuryMode);
-console.log('PRICE SOURCE DOMAINS:', priceSource.map(it => domainOf(it.link)));
+    console.log('CLASS A COUNT:', classAForPricing.length);
+    console.log('CLASS B COUNT:', classBForPricing.length);
+    console.log('CLASS C CONTEXT DOMAINS:', uniqueDomains(classCRaw));
+    console.log('LUXURY MODE:', luxuryMode);
+    console.log('PRICE SOURCE DOMAINS:', uniqueDomains(priceSource));
 
 const rawPrices = priceSource
   .map(it => parseMoney(it.price_str || it.title || it.snippet))
