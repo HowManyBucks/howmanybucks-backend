@@ -1986,10 +1986,14 @@ const contextScore = {
       }
     }
 
-    let priceSource = classAForPricing;
-
+    let priceSource = luxuryMode
+      ? classBForPricing
+      : classAForPricing;
+    
     if (priceSource.length < 3) {
-      priceSource = dedupeByLink([...classAForPricing, ...classBForPricing]);
+      priceSource = luxuryMode
+        ? dedupeByLink([...classBForPricing, ...classAForPricing])
+        : dedupeByLink([...classAForPricing, ...classBForPricing]);
     }
 
     const ebayOnly = priceSource.filter(it =>
