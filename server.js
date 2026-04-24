@@ -2020,35 +2020,34 @@ const rawPrices = priceSource
   .map(it => {
     const priceText = String(it.price_str || '').trim();
     const snippetText = String(it.snippet || '').trim();
+    const titleText = String(it.title || '').trim();
 
-    // 1) Priorità: prezzo dichiarato da SerpApi/eBay
+    // 1️⃣ priorità: prezzo diretto
     if (priceText) {
-      const directPrice = parseMoney(priceText);
-      if (Number.isFinite(directPrice)) return directPrice;
+      const direct = parseMoney(priceText);
+      if (Number.isFinite(direct)) return direct;
     }
 
-    // 2) Fallback controllato: cerca prezzi solo nello snippet
-    const text = snippetText;
+    // 2️⃣ fallback: cerca OVUNQUE (snippet + titolo)
+    const combined = `${snippetText} ${titleText}`;
 
-    // Esclude testi promozionali non rappresentativi
-    if (/save|discount|off|size guide|codice|promo|spedizione|shipping/i.test(text)) {
-      return NaN;
-    }
+    const matches = combined.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
 
-    const matches = text.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
     const nums = matches
       .map(x => parseMoney(x))
       .filter(Number.isFinite)
-      .filter(p => p >= 20 && p <= 3000);
+      .filter(p => p >= 20 && p <= 5000);
 
     if (!nums.length) return NaN;
 
-    // Se ci sono più prezzi, prende il più basso plausibile
+    // 🔑 PRENDI IL PIÙ BASSO (logica second-hand)
     return Math.min(...nums);
   })
   .filter(Number.isFinite)
-  .filter(p => p >= 20 && p <= 3000);
+  .filter(p => p >= 20 && p <= 5000);
 
+console.log('RAW PRICES SAMPLE:', rawPrices.slice(0, 10));
+    
 // 🔴 LUXURY PRICE FLOOR
 if (luxuryMode) {
   const before = rawPrices.length;
