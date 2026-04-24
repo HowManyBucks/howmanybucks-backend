@@ -2024,11 +2024,11 @@ const medianRaw = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
 // - taglia prezzi sopra il 250% della mediana
 let prices = rawPrices.filter(p => {
   if (!medianRaw) return true;
-  return p >= (medianRaw * 0.35) && p <= (medianRaw * 2.5);
+  return p >= (medianRaw * 0.20) && p <= (medianRaw * 3.5);
 });
 
 // fallback intelligente se pochi dati
-if (prices.length < 8 && rawPrices.length >= 5) {
+if (prices.length < 4 && rawPrices.length >= 5) {
   console.log('FALLBACK PRICE FILTER ATTIVO');
 
   prices = rawPrices.filter(p => {
