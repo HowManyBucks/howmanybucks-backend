@@ -2019,11 +2019,25 @@ const contextScore = {
 const rawPrices = priceSource
   .map(it => {
     const text = (it.price_str || it.snippet || '').toString();
-    const match = text.match(/€\s?\d+|\d+\s?€|£\s?\d+|\d+\s?£/);
-    return match ? parseMoney(match[0]) : NaN;
+
+    if (/retail price|rrp|full price/i.test(text)) {
+      const discountedMatches = text.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
+      const nums = discountedMatches
+        .map(x => parseMoney(x))
+        .filter(Number.isFinite);
+
+      return nums.length ? Math.min(...nums) : NaN;
+    }
+
+    const matches = text.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
+    const nums = matches
+      .map(x => parseMoney(x))
+      .filter(Number.isFinite);
+
+    return nums.length ? Math.min(...nums) : NaN;
   })
   .filter(Number.isFinite)
-  .filter(p => p >= 50 && p <= 5000);
+  .filter(p => p >= 120 && p <= 3000);
 
 // 🔴 LUXURY PRICE FLOOR
 if (luxuryMode) {
