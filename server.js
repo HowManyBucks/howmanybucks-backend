@@ -2243,10 +2243,11 @@ async function searchWithGoogleLens(imageUrl) {
 app.get('/test-ebay', async (req, res) => {
   try {
     const query = req.query.q || "nike t shirt black";
+    const qLower = query.toLowerCase();
 
     const token = await getEbayToken();
 
-    const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${query}`;
+    const url = `https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encodeURIComponent(query)}&limit=50`;
 
     const response = await fetch(url, {
       headers: {
@@ -2257,30 +2258,68 @@ app.get('/test-ebay', async (req, res) => {
 
     const data = await response.json();
 
-let category = "t-shirt";
+    let category = "t-shirt";
 
-if (query.toLowerCase().includes("hoodie")) category = "hoodie";
-if (query.toLowerCase().includes("jacket")) category = "jacket";
-if (query.toLowerCase().includes("jeans")) category = "jeans";
-if (query.toLowerCase().includes("polo")) category = "polo";
-if (query.toLowerCase().includes("hat")) category = "hat";
-if (query.toLowerCase().includes("cap")) category = "hat";
+    if (qLower.includes("hoodie")) category = "hoodie";
+    if (qLower.includes("jacket")) category = "jacket";
+    if (qLower.includes("jeans")) category = "jeans";
+    if (qLower.includes("polo")) category = "polo";
+    if (qLower.includes("hat")) category = "hat";
+    if (qLower.includes("cap")) category = "hat";
 
-const items = (data.itemSummaries || [])
-  .filter(item => !isExcludedApparelResult(item.title))
-  .filter(item => matchesApparelCategory(item.title, category))
+    const items = (data.itemSummaries || [])
+      .filter(item => !isExcludedApparelResult(item.title || ''))
+      .filter(item => matchesApparelCategory(item.title || '', category))
+
+      // STEP 1 — solo usato
+      .filter(item => {
+        const cond = (item.condition || '').toLowerCase();
+        return cond.includes('pre-owned');
+      })
+
+      // STEP 2 — categoria coerente con query
+      .filter(item => {
+        const text = (item.title || '').toLowerCase();
+
+        if (category === 'jacket') {
+          return text.includes('jacket') || text.includes('giacca') || text.includes('blazer') || text.includes('coat');
+        }
+
+        return true;
+      })
+
+      // STEP 3 — esclusioni forti solo per jacket
+      .filter(item => {
+        const text = (item.title || '').toLowerCase();
+
+        if (category === 'jacket') {
+          if (text.includes('shirt')) return false;
+          if (text.includes('vest')) return false;
+        }
+
+        return true;
+      })
+
       .map(item => ({
         title: item.title,
         price: item.price?.value,
         currency: item.price?.currency,
         condition: item.condition,
         url: item.itemWebUrl
-      }));
+      }))
 
-    res.send(`<pre>${JSON.stringify(items.slice(0, 10), null, 2)}</pre>`);
+      // STEP 4 — prezzo minimo/massimo provvisorio
+      .filter(item => {
+        const price = parseFloat(item.price);
+        if (!price) return false;
+        if (price < 50) return false;
+        if (price > 1200) return false;
+        return true;
+      });
+
+    res.send(`<pre>${JSON.stringify(items.slice(0, 20), null, 2)}</pre>`);
   } catch (error) {
     console.error(error);
     res.status(500).send("Errore eBay");
   }
 });
-app.listen(PORT, '0.0.0.0', () => console.log(`API avviata su :${PORT}`));
