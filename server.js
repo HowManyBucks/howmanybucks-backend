@@ -288,32 +288,16 @@ function passesSiteClassFilter(item = {}, ctx = {}) {
   return brandOk;
 }
 
-
 function isItalianPricingResult(item = {}, siteList = []) {
   const d = domainOf(item.link || '').replace(/^www\./, '');
-  const snippet = String(item.snippet || '').toLowerCase();
-  const title = String(item.title || '').toLowerCase();
   const source = String(item.source || '').toLowerCase();
-  
-  const text = `${title} ${snippet}`;
-  
+
   const allowedDomains = new Set(
     (siteList || []).map(x => String(x || '').replace(/^www\./, ''))
   );
 
-    
   if (!allowedDomains.has(d)) {
     console.log('ITALIAN FILTER DROP - DOMAIN NOT ALLOWED:', d, '|', item.title);
-    return false;
-  }
-
-  if (ITALIAN_PRIMARY_DOMAINS.has(d)) {
-    console.log('ITALIAN FILTER PASS - PRIMARY DOMAIN:', d, '|', item.title);
-    return true;
-  }
-
-  if (!ITALY_ALLOWED_GLOBAL_DOMAINS.has(d)) {
-    console.log('ITALIAN FILTER DROP - GLOBAL DOMAIN NOT ALLOWED:', d, '|', item.title);
     return false;
   }
 
@@ -323,39 +307,20 @@ function isItalianPricingResult(item = {}, siteList = []) {
     return pass;
   }
 
-  console.log('ITALIAN FILTER PASS - GLOBAL WHITELIST:', d, '|', item.title);
-  return true;
-  
-  // 3) Il listing deve mostrare segnali Italia
-  const italySignals = [
-    'italia',
-    'italy',
-    'venditore italiano',
-    'seller italy',
-    'spedizione dall italia',
-    'spedizione da italia',
-    'from italy',
-    'made in italy'
-  ];
-
-  const hasItalySignal = italySignals.some(sig => text.includes(sig));
-
-  // 4) Il listing deve avere segnali di lingua italiana
-  
-  const italianLanguageSignals = [
-    'giacca', 'maglietta', 'felpa', 'scarpe', 'cappello',
-    'uomo', 'donna', 'usato', 'nuovo', 'ottime condizioni',
-    'taglia', 'colore', 'spedizione', 'venditore'
-  ];
-  const hasItalianLanguageSignal = italianLanguageSignals.some(sig => text.includes(sig));
-  
-  // 5) Caso speciale eBay: solo ebay.it
-  if (source.includes('ebay')) {
-    return d === 'ebay.it';
+  if (ITALIAN_PRIMARY_DOMAINS.has(d)) {
+    console.log('ITALIAN FILTER PASS - PRIMARY DOMAIN:', d, '|', item.title);
+    return true;
   }
-// per ora non bloccare i marketplace globali per lingua/geo nel listing
-  return true;
-}
+
+  if (ITALY_ALLOWED_GLOBAL_DOMAINS.has(d)) {
+    console.log('ITALIAN FILTER PASS - GLOBAL WHITELIST:', d, '|', item.title);
+    return true;
+  }
+
+  console.log('ITALIAN FILTER DROP - GLOBAL DOMAIN NOT ALLOWED:', d, '|', item.title);
+  return false;
+}  
+  
 // ===== GEMINI ANALYZE =====
 
 async function analyzeItemWithGemini(imageBase64) {
