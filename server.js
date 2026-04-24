@@ -2133,7 +2133,8 @@ if (luxuryMode && priceSource.length) {
   priceSource = geminiMatchedItems;
   console.log('PRICE SOURCE OVERRIDE - GEMINI MATCHED ITEMS:', priceSource.length);
 }
-
+}
+    
 priceSource = geminiMatchedItems;
 
 const rawPrices = priceSource
