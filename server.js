@@ -2017,9 +2017,13 @@ const contextScore = {
     console.log('PRICE SOURCE DOMAINS:', uniqueDomains(priceSource));
 
 const rawPrices = priceSource
-  .map(it => parseMoney(it.price_str))
+  .map(it => {
+    const text = (it.price_str || it.snippet || '').toString();
+    const match = text.match(/€\s?\d+|\d+\s?€|£\s?\d+|\d+\s?£/);
+    return match ? parseMoney(match[0]) : NaN;
+  })
   .filter(Number.isFinite)
-  .filter(p => p >= 20 && p <= 3000);
+  .filter(p => p >= 50 && p <= 5000);
 
 // 🔴 LUXURY PRICE FLOOR
 if (luxuryMode) {
