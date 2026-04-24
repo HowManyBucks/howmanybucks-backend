@@ -2016,6 +2016,23 @@ const rawPrices = priceSource
   .map(it => parseMoney(it.price_str || it.title || it.snippet))
   .filter(Number.isFinite);
 
+// 🔴 LUXURY PRICE FLOOR
+if (luxuryMode) {
+  const before = rawPrices.length;
+
+  const filteredLuxury = rawPrices.filter(p => p >= 120);
+
+  console.log('LUXURY FLOOR FILTER:', {
+    before,
+    after: filteredLuxury.length
+  });
+
+  if (filteredLuxury.length >= 3) {
+    rawPrices.length = 0;
+    rawPrices.push(...filteredLuxury);
+  }
+}    
+    
 const sorted = [...rawPrices].sort((a, b) => a - b);
 const medianRaw = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
 
