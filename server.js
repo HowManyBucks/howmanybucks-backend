@@ -2013,8 +2013,9 @@ const contextScore = {
     console.log('PRICE SOURCE DOMAINS:', uniqueDomains(priceSource));
 
 const rawPrices = priceSource
-  .map(it => parseMoney(it.price_str || it.title || it.snippet))
-  .filter(Number.isFinite);
+  .map(it => parseMoney(it.price_str))
+  .filter(Number.isFinite)
+  .filter(p => p >= 20 && p <= 3000);
 
 // 🔴 LUXURY PRICE FLOOR
 if (luxuryMode) {
