@@ -763,13 +763,14 @@ const dedupeByLink = items => {
 };
 
 // ===== SCORING & PRICE =====
+
 const parseMoney = s => {
   if (s === null || s === undefined) return null;
-  // Se arriva un numero, usalo direttamente
+
   if (typeof s === 'number') {
     return Number.isFinite(s) ? s : null;
   }
-  // Se arriva un oggetto, prova a leggere campi tipici prezzo
+
   if (typeof s === 'object') {
     const candidate =
       s.price ??
@@ -777,35 +778,22 @@ const parseMoney = s => {
       s.amount ??
       s.extracted_price ??
       null;
+
     if (candidate === null || candidate === undefined) return null;
     s = String(candidate);
   }
-  // Qualsiasi altro caso → forza a stringa
+
   s = String(s);
 
-  // 🔴 INSERISCI QUI (NUOVA RIGA 820)
-  const lower = s.toLowerCase();
-
-  if (
-    lower.includes('retail') ||
-    lower.includes('rrp') ||
-    lower.includes('list price') ||
-    lower.includes('prezzo retail')
-  ) {
-    return null;
-  }
-
-const m = s
-  .replace(/[^\d,.\-]/g, '')
-  .replace(',', '.')
-  .match(/-?\d+(\.\d+)?/);
-  
-  const m = s
+  const match = s
     .replace(/[^\d,.\-]/g, '')
     .replace(',', '.')
     .match(/-?\d+(\.\d+)?/);
-  return m ? Number(m[0]) : null;
-};function robustStats(prices) {
+
+  return match ? Number(match[0]) : null;
+};
+
+function robustStats(prices) {
   const arr = prices.filter(Number.isFinite).sort((a, b) => a - b);
   if (!arr.length) return { median: null, p25: null, p75: null, filtered: [] };
   const q = (p) => { const pos = (arr.length - 1) * p; const base = Math.floor(pos), rest = pos - base;
