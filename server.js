@@ -817,6 +817,24 @@ const parseMoney = s => {
   }
   // Qualsiasi altro caso → forza a stringa
   s = String(s);
+
+  // 🔴 INSERISCI QUI (NUOVA RIGA 820)
+  const lower = s.toLowerCase();
+
+  if (
+    lower.includes('retail') ||
+    lower.includes('rrp') ||
+    lower.includes('list price') ||
+    lower.includes('prezzo retail')
+  ) {
+    return null;
+  }
+
+const m = s
+  .replace(/[^\d,.\-]/g, '')
+  .replace(',', '.')
+  .match(/-?\d+(\.\d+)?/);
+  
   const m = s
     .replace(/[^\d,.\-]/g, '')
     .replace(',', '.')
