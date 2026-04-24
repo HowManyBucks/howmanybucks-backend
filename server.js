@@ -2052,7 +2052,7 @@ const { baseMedian, mode, newRatio } = applyConditionHeuristic(
 );
     
 const sellableBase = luxuryMode
-  ? (baseMedian ?? percentile(prices, 0.40))
+  ? (percentile(prices, 0.75) ?? baseMedian)
   : (percentile(prices, 0.25) ?? baseMedian);
 
 const suggested = humanRound(sellableBase);
