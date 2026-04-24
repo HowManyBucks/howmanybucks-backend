@@ -2123,11 +2123,15 @@ if (luxuryMode && priceSource.length) {
     await sleep(150);
   }
 
-  if (checked.length >= 3) {
-    geminiMatchedItems = checked;
-  }
+  if (checked.length >= 1) {
+  geminiMatchedItems = checked;
+  console.log('USING ONLY GEMINI MATCHED ITEMS');
+}
 
   console.log('GEMINI MATCHED COUNT:', checked.length);
+  if (geminiMatchedItems.length > 0) {
+  priceSource = geminiMatchedItems;
+  console.log('PRICE SOURCE OVERRIDE - GEMINI MATCHED ITEMS:', priceSource.length);
 }
 
 priceSource = geminiMatchedItems;
@@ -2152,7 +2156,7 @@ const rawPrices = priceSource
     const nums = matches
       .map(x => parseMoney(x))
       .filter(Number.isFinite)
-      .filter(p => p >= 20 && p <= 5000);
+      .filter(p => p >= 80 && p <= 5000);
 
     if (!nums.length) return NaN;
 
@@ -2160,7 +2164,7 @@ const rawPrices = priceSource
     return Math.min(...nums);
   })
   .filter(Number.isFinite)
-  .filter(p => p >= 20 && p <= 5000);
+  .filter(p => p >= 80 && p <= 5000);
 
 console.log('RAW PRICES SAMPLE:', rawPrices.slice(0, 10));
     
