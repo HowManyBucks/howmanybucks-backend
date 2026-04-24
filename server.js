@@ -425,8 +425,81 @@ return parsed;
   }
 }
 
+async function validateEbayItemWithGemini({
+  userAnalysis,
+  ebayItem
+}) {
+  try {
+    const prompt = `
+Confronta un capo di abbigliamento identificato da foto utente con un annuncio eBay.
 
+DATI FOTO UTENTE:
+brand: ${userAnalysis.brand || ''}
+model: ${userAnalysis.model || ''}
+category: ${userAnalysis.category || ''}
+color: ${userAnalysis.color || ''}
 
+ANNUNCIO EBAY:
+title: ${ebayItem.title || ''}
+snippet: ${ebayItem.snippet || ''}
+price: ${ebayItem.price_str || ''}
+image: ${ebayItem.image || ''}
+
+Rispondi SOLO in JSON valido:
+{
+  "match": true/false,
+  "confidence": 0-100,
+  "reason": "breve motivo"
+}
+
+Regole:
+- Il brand deve coincidere o essere chiaramente compatibile.
+- La categoria deve essere coerente.
+- Modello, linea, pattern, colore e immagine servono come conferma.
+- Se brand diverso, match deve essere false.
+`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': process.env.GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }]
+            }
+          ]
+        })
+      }
+    );
+
+    const data = await response.json();
+    const rawText = data?.candidates?.[0]?.content?.parts
+      ?.map(p => p.text || '')
+      .join(' ')
+      .trim() || '';
+
+    const cleaned = rawText
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      return { match: false, confidence: 0, reason: 'Gemini no JSON' };
+    }
+
+    return JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.warn('GEMINI EBAY MATCH ERROR:', e.message);
+    return { match: false, confidence: 0, reason: e.message };
+  }
+}
 
 // ===== LEXICON =====
 const STOPWORDS = new Set([
@@ -2015,6 +2088,49 @@ const contextScore = {
     console.log('CLASS C CONTEXT DOMAINS:', uniqueDomains(classCRaw));
     console.log('LUXURY MODE:', luxuryMode);
     console.log('PRICE SOURCE DOMAINS:', uniqueDomains(priceSource));
+
+// 🔵 GEMINI MATCH FILTER — validazione annunci eBay/marketplace
+let geminiMatchedItems = priceSource;
+
+if (luxuryMode && priceSource.length) {
+  const candidatesForGemini = priceSource.slice(0, 20);
+
+  const checked = [];
+
+  for (const item of candidatesForGemini) {
+    const validation = await validateEbayItemWithGemini({
+      userAnalysis: {
+        brand: finalBrand,
+        model: finalModel,
+        category: finalCategory,
+        color: finalColor
+      },
+      ebayItem: item
+    });
+
+    console.log('GEMINI ITEM MATCH:', {
+      title: item.title,
+      domain: domainOf(item.link),
+      match: validation.match,
+      confidence: validation.confidence,
+      reason: validation.reason
+    });
+
+    if (validation.match === true && Number(validation.confidence) >= 60) {
+      checked.push(item);
+    }
+
+    await sleep(150);
+  }
+
+  if (checked.length >= 3) {
+    geminiMatchedItems = checked;
+  }
+
+  console.log('GEMINI MATCHED COUNT:', checked.length);
+}
+
+priceSource = geminiMatchedItems;
 
 const rawPrices = priceSource
   .map(it => {
