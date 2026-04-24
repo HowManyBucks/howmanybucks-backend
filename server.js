@@ -2018,26 +2018,36 @@ const contextScore = {
 
 const rawPrices = priceSource
   .map(it => {
-    const text = (it.price_str || it.snippet || '').toString();
+    const priceText = String(it.price_str || '').trim();
+    const snippetText = String(it.snippet || '').trim();
 
-    if (/retail price|rrp|full price/i.test(text)) {
-      const discountedMatches = text.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
-      const nums = discountedMatches
-        .map(x => parseMoney(x))
-        .filter(Number.isFinite);
+    // 1) Priorità: prezzo dichiarato da SerpApi/eBay
+    if (priceText) {
+      const directPrice = parseMoney(priceText);
+      if (Number.isFinite(directPrice)) return directPrice;
+    }
 
-      return nums.length ? Math.min(...nums) : NaN;
+    // 2) Fallback controllato: cerca prezzi solo nello snippet
+    const text = snippetText;
+
+    // Esclude testi promozionali non rappresentativi
+    if (/save|discount|off|size guide|codice|promo|spedizione|shipping/i.test(text)) {
+      return NaN;
     }
 
     const matches = text.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
     const nums = matches
       .map(x => parseMoney(x))
-      .filter(Number.isFinite);
+      .filter(Number.isFinite)
+      .filter(p => p >= 20 && p <= 3000);
 
-    return nums.length ? Math.min(...nums) : NaN;
+    if (!nums.length) return NaN;
+
+    // Se ci sono più prezzi, prende il più basso plausibile
+    return Math.min(...nums);
   })
   .filter(Number.isFinite)
-  .filter(p => p >= 120 && p <= 3000);
+  .filter(p => p >= 20 && p <= 3000);
 
 // 🔴 LUXURY PRICE FLOOR
 if (luxuryMode) {
