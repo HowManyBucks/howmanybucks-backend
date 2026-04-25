@@ -2123,19 +2123,20 @@ if (luxuryMode && priceSource.length) {
     await sleep(150);
   }
 
-  if (checked.length >= 1) {
-  geminiMatchedItems = checked;
-  console.log('USING ONLY GEMINI MATCHED ITEMS');
-}
+const checkedWithPrice = checked.filter(it => {
+  const txt = `${it.price_str || ''} ${it.snippet || ''} ${it.title || ''}`;
+  return parseMoney(txt) != null;
+});
 
-  console.log('GEMINI MATCHED COUNT:', checked.length);
-  if (geminiMatchedItems.length > 0) {
-  priceSource = geminiMatchedItems;
-  console.log('PRICE SOURCE OVERRIDE - GEMINI MATCHED ITEMS:', priceSource.length);
+console.log('GEMINI MATCHED COUNT:', checked.length);
+console.log('GEMINI MATCHED WITH PRICE COUNT:', checkedWithPrice.length);
+
+if (checkedWithPrice.length >= 1) {
+  priceSource = checkedWithPrice;
+  console.log('PRICE SOURCE OVERRIDE - GEMINI MATCHED WITH PRICE:', priceSource.length);
+} else {
+  console.log('GEMINI MATCHED BUT NO PRICE - KEEPING ORIGINAL PRICE SOURCE:', priceSource.length);
 }
-}
-    
-priceSource = geminiMatchedItems;
 
 const rawPrices = priceSource
   .map(it => {
