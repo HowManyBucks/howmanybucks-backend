@@ -2137,7 +2137,8 @@ if (checkedWithPrice.length >= 1) {
 } else {
   console.log('GEMINI MATCHED BUT NO PRICE - KEEPING ORIGINAL PRICE SOURCE:', priceSource.length);
 }
-
+}
+    
 const rawPrices = priceSource
   .map(it => {
     const priceText = String(it.price_str || '').trim();
