@@ -2393,8 +2393,16 @@ if (luxuryMode && priceSource.length) {
   }
 
 const checkedWithPrice = checked.filter(it => {
-  const txt = `${it.price_str || ''} ${it.snippet || ''} ${it.title || ''}`;
-  return parseMoney(txt) != null;
+  const price = getItemPrice(it);
+
+  console.log('GEMINI CHECKED PRICE READ:', {
+    title: it.title,
+    price_str: it.price_str,
+    snippet: it.snippet,
+    parsedPrice: price
+  });
+
+  return Number.isFinite(price);
 });
 
 console.log('GEMINI MATCHED COUNT:', checked.length);
