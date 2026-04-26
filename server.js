@@ -1550,6 +1550,185 @@ function isLuxuryBrand(brand = '') {
     'giorgio armani', 'emporio armani', 'armani', 'off white'
   ].some(x => b.includes(norm(x)));
 }
+
+// ==================================================
+// HMB PRICE UTILS
+// ==================================================
+
+function extractPriceNumber(input) {
+  if (input === null || input === undefined) return null;
+
+  const text = String(input)
+    .replace(/\s/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.');
+
+  const match = text.match(/(\d+(?:\.\d{1,2})?)/);
+  if (!match) return null;
+
+  const value = Number(match[1]);
+  if (!Number.isFinite(value)) return null;
+
+  return value;
+}
+
+function getItemPrice(item) {
+  return (
+    extractPriceNumber(item?.price) ??
+    extractPriceNumber(item?.price_str) ??
+    extractPriceNumber(item?.extracted_price) ??
+    extractPriceNumber(item?.snippet) ??
+    extractPriceNumber(item?.title)
+  );
+}
+
+function getValidPrices(items = []) {
+  return items
+    .map(getItemPrice)
+    .filter(p => Number.isFinite(p) && p > 0);
+}
+
+function computeRetailAnchor(retailItems = []) {
+  const prices = getValidPrices(retailItems)
+    .filter(p => p >= 80 && p <= 10000)
+    .sort((a, b) => a - b);
+
+  if (!prices.length) return null;
+
+  // Scelta prudente: usa il prezzo retail minimo valido come anchor
+  return prices[0];
+}
+
+function filterPrices(items = [], retailAnchor = null, isLuxury = false) {
+  let minPrice = isLuxury ? 120 : 80;
+  let maxPrice = 5000;
+
+  if (retailAnchor && Number.isFinite(retailAnchor)) {
+    minPrice = Math.max(isLuxury ? 120 : 80, retailAnchor * 0.15);
+    maxPrice = Math.max(minPrice, retailAnchor * 0.85);
+  }
+
+  return items.filter(item => {
+    const price = getItemPrice(item);
+    if (!Number.isFinite(price)) return false;
+    return price >= minPrice && price <= maxPrice;
+  });
+}
+
+function average(values = []) {
+  if (!values.length) return null;
+  return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+function median(values = []) {
+  if (!values.length) return null;
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  return sorted[mid];
+}
+
+function trimmedMean(values = [], trimRatio = 0.1) {
+  if (!values.length) return null;
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const trimCount = Math.floor(sorted.length * trimRatio);
+  const trimmed = sorted.slice(trimCount, sorted.length - trimCount);
+
+  return average(trimmed.length ? trimmed : sorted);
+}
+
+function computeFinalPrice(prices = [], isLuxury = false) {
+  const valid = prices
+    .filter(p => Number.isFinite(p) && p > 0)
+    .sort((a, b) => a - b);
+
+  if (!valid.length) return null;
+
+  let result;
+
+  if (valid.length < 5) {
+    result = average(valid);
+  } else if (valid.length <= 15) {
+    result = median(valid);
+  } else {
+    result = trimmedMean(valid, 0.1);
+  }
+
+  return Math.round(result);
+}
+
+// ==================================================
+// HMB GEMINI VALIDATION UTILS
+// ==================================================
+
+function buildGeminiValidationPayload(targetObject, items = []) {
+  return {
+    target: targetObject,
+    items: items.slice(0, 10).map((item, index) => ({
+      id: item.id ?? index,
+      title: item.title || '',
+      price: getItemPrice(item),
+      snippet: item.snippet || '',
+      link: item.link || ''
+    }))
+  };
+}
+
+function applyGeminiValidation(items = [], geminiResponse = [], minConfidence = 0.7) {
+  if (!Array.isArray(geminiResponse) || !geminiResponse.length) {
+    return items;
+  }
+
+  const allowedIds = new Set(
+    geminiResponse
+      .filter(r => r?.match === true && Number(r?.confidence || 0) >= minConfidence)
+      .map(r => r.id)
+  );
+
+  return items.filter((item, index) => {
+    const id = item.id ?? index;
+    return allowedIds.has(id);
+  });
+}
+
+// ==================================================
+// HMB FILTER PIPELINE — BRAND + CATEGORY + CLASS C
+// ==================================================
+
+const targetBrandForFilter =
+  finalBrand ||
+  brand ||
+  aiBrand ||
+  '';
+
+const isLuxury =
+  ['valentino', 'valentino garavani', 'gucci', 'prada', 'versace', 'dior', 'fendi', 'balenciaga']
+    .includes(normalizeBrand(targetBrandForFilter));
+
+let filteredResults = results
+  .map((item, index) => ({
+    ...item,
+    id: item.id ?? index
+  }))
+  .filter(item => isBrandAllowed(item, targetBrandForFilter))
+  .filter(item => isValidCategory(item))
+  .map(item => ({
+    ...item,
+    hmbCategoryBoost: getCategoryBoost(item)
+  }));
+
+const { usedItems, retailItems } = splitUsedAndRetailItems(filteredResults);
+
+const retailAnchor = computeRetailAnchor(retailItems);
+
+const priceFilteredUsedItems = filterPrices(usedItems, retailAnchor, isLuxury);
+
 app.post('/search/image', async (req, res) => {
   try {
     console.log("SEARCH_IMAGE_HIT");
