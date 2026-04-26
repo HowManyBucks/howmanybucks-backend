@@ -1552,6 +1552,90 @@ function isLuxuryBrand(brand = '') {
 }
 
 // ==================================================
+// HMB FILTER UTILS — BRAND / CATEGORY
+// ==================================================
+
+function normalizeBrand(input = '') {
+  return norm(input)
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const BRAND_EXCLUSIONS = {
+  valentino: [
+    'mario valentino',
+    'valentino bags',
+    'red valentino',
+    'valentino by mario',
+    'm. valentino'
+  ],
+  gucci: [],
+  prada: [],
+  versace: [
+    'versace jeans couture',
+    'versus versace'
+  ]
+};
+
+function isBrandAllowed(item = {}, targetBrand = '') {
+  const brandKey = normalizeBrand(targetBrand);
+  if (!brandKey) return true;
+
+  const text = norm(`${item.title || ''} ${item.snippet || ''} ${item.link || ''}`);
+
+  const exclusions = BRAND_EXCLUSIONS[brandKey] || [];
+
+  for (const bad of exclusions) {
+    if (text.includes(norm(bad))) {
+      console.log('BRAND EXCLUSION DROP:', bad, '|', item.title);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const CATEGORY_EXCLUDE_ADVANCED = [
+  'accessories',
+  'accessori',
+  'bags',
+  'bag',
+  'borsa',
+  'borse',
+  'wallet',
+  'portafoglio',
+  'belt',
+  'cintura',
+  'perfume',
+  'profumo',
+  'beauty',
+  'watch',
+  'orologio',
+  'jewelry',
+  'gioielli',
+  'phone',
+  'cover',
+  'case',
+  'custodia',
+  'sunglasses',
+  'occhiali'
+];
+
+function isValidCategoryAdvanced(item = {}) {
+  const text = norm(`${item.title || ''} ${item.snippet || ''} ${item.link || ''}`);
+
+  for (const bad of CATEGORY_EXCLUDE_ADVANCED) {
+    if (text.includes(norm(bad))) {
+      console.log('CATEGORY EXCLUSION DROP:', bad, '|', item.title);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// ==================================================
 // HMB PRICE UTILS
 // ==================================================
 
@@ -1697,37 +1781,7 @@ function applyGeminiValidation(items = [], geminiResponse = [], minConfidence = 
   });
 }
 
-// ==================================================
-// HMB FILTER PIPELINE — BRAND + CATEGORY + CLASS C
-// ==================================================
 
-const targetBrandForFilter =
-  finalBrand ||
-  brand ||
-  aiBrand ||
-  '';
-
-const isLuxury =
-  ['valentino', 'valentino garavani', 'gucci', 'prada', 'versace', 'dior', 'fendi', 'balenciaga']
-    .includes(normalizeBrand(targetBrandForFilter));
-
-let filteredResults = results
-  .map((item, index) => ({
-    ...item,
-    id: item.id ?? index
-  }))
-  .filter(item => isBrandAllowed(item, targetBrandForFilter))
-  .filter(item => isValidCategory(item))
-  .map(item => ({
-    ...item,
-    hmbCategoryBoost: getCategoryBoost(item)
-  }));
-
-const { usedItems, retailItems } = splitUsedAndRetailItems(filteredResults);
-
-const retailAnchor = computeRetailAnchor(retailItems);
-
-const priceFilteredUsedItems = filterPrices(usedItems, retailAnchor, isLuxury);
 
 app.post('/search/image', async (req, res) => {
   try {
@@ -2122,11 +2176,14 @@ const contextScore = {
   siteWeights: Object.fromEntries([...whiteSet].map(d => [d, siteWeights[d] || 0]))
 };
 
-    const cleaned = filteredStrict.filter(it => {
-      const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
-      return !isExcludedApparelResult(text);
+    const cleaned = filteredStrict
+      .filter(it => isBrandAllowed(it, finalBrand))
+      .filter(it => isValidCategoryAdvanced(it))
+      .filter(it => {
+        const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
+        return !isExcludedApparelResult(text);
     });
-
+    
     const ranked = [...cleaned]
       .map(it => ({ ...it, _score: scoreItem(it, contextScore) }))
       .sort((a, b) => b._score - a._score);
@@ -2166,7 +2223,11 @@ const contextScore = {
       })
     );
 
-    const classCRaw = topForPricing.filter(it => isClassCResult(it));
+    const retailAnchor = computeRetailAnchor(classCRaw);
+
+    console.log('RETAIL ANCHOR:', retailAnchor);
+    console.log('CLASS C RETAIL COUNT:', classCRaw.length);
+    console.log('CLASS C RETAIL DOMAINS:', uniqueDomains(classCRaw));
 
     let classAForPricing = classARaw;
     let classBForPricing = classBRaw;
@@ -2318,11 +2379,15 @@ if (checkedWithPrice.length >= 1) {
 }
 }
     
-const rawPrices = priceSource
-  .map(it => {
-    const priceText = String(it.price_str || '').trim();
-    const snippetText = String(it.snippet || '').trim();
-    const titleText = String(it.title || '').trim();
+const priceFilteredSource = filterPrices(priceSource, retailAnchor, luxuryMode);
+
+console.log('PRICE FILTERED SOURCE COUNT:', priceFilteredSource.length);
+
+    const rawPrices = priceFilteredSource
+      .map(it => {
+        const priceText = String(it.price_str || '').trim();
+        const snippetText = String(it.snippet || '').trim();
+        const titleText = String(it.title || '').trim();
 
     // 1️⃣ priorità: prezzo diretto
     if (priceText) {
@@ -2402,13 +2467,9 @@ const { baseMedian, mode, newRatio } = applyConditionHeuristic(
   condition
 );
     
-const sellableBase = luxuryMode
-  ? (percentile(prices, 0.75) ?? baseMedian)
-  : (percentile(prices, 0.25) ?? baseMedian);
+const sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
 
-const suggested = humanRound(sellableBase);
-  
-
+const suggested = humanRound(sellableBase);  
 
     const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
     const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
@@ -2447,7 +2508,12 @@ const suggested = humanRound(sellableBase);
         resultsFound: merged.length,
         afterWhitelist: filteredWL.length,
         afterBrandFilter: filteredStrict.length,
+        afterCleanedFilter: cleaned.length,
         rankedTopUsed: Math.min(filteredStrict.length, TOP_N),
+        classCRetailCount: classCRaw.length,
+        retailAnchor,
+        priceSourceCount: priceSource.length,
+        priceFilteredSourceCount: priceFilteredSource.length,
         pricedCount: prices.length,
         baseMedian,
         sellableBase,
