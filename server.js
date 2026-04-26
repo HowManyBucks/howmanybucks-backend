@@ -1619,7 +1619,7 @@ const CATEGORY_EXCLUDE_ADVANCED = [
   'case',
   'custodia',
   'sunglasses',
-  'occhiali'
+  'occhiali',
   'tie',
   'cravatta',
   'lana',
