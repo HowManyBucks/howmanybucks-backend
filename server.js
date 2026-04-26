@@ -1620,6 +1620,22 @@ const CATEGORY_EXCLUDE_ADVANCED = [
   'custodia',
   'sunglasses',
   'occhiali'
+  'tie',
+  'cravatta',
+  'lana',
+  'gomitolo',
+  'gomitoli',
+  'filato',
+  'uncinetto',
+  'scarf',
+  'sciarpa',
+  'gloves',
+  'guanti',
+  'cap',
+  'hat',
+  'cappello',
+  'cappellino',
+  'beanie',
 ];
 
 function isValidCategoryAdvanced(item = {}) {
@@ -1642,18 +1658,29 @@ function isValidCategoryAdvanced(item = {}) {
 function extractPriceNumber(input) {
   if (input === null || input === undefined) return null;
 
-  const text = String(input)
-    .replace(/\s/g, '')
-    .replace(/\./g, '')
-    .replace(',', '.');
+  const text = String(input);
 
-  const match = text.match(/(\d+(?:\.\d{1,2})?)/);
-  if (!match) return null;
+  const explicitPriceMatches = text.match(/(?:€|eur|euro)\s?[\d.,]+|[\d.,]+\s?(?:€|eur|euro)/gi);
 
-  const value = Number(match[1]);
-  if (!Number.isFinite(value)) return null;
+  if (explicitPriceMatches && explicitPriceMatches.length) {
+    const nums = explicitPriceMatches
+      .map(x => {
+        const cleaned = x
+          .toLowerCase()
+          .replace(/eur|euro|€/g, '')
+          .replace(/\s/g, '')
+          .replace(/\./g, '')
+          .replace(',', '.');
 
-  return value;
+        const n = Number(cleaned);
+        return Number.isFinite(n) ? n : null;
+      })
+      .filter(Number.isFinite);
+
+    if (nums.length) return Math.min(...nums);
+  }
+
+  return null;
 }
 
 function getItemPrice(item) {
