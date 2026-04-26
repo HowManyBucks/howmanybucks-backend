@@ -2222,7 +2222,9 @@ const contextScore = {
         softVisualHints
       })
     );
-
+    
+    const classCRaw = topForPricing.filter(it => isClassCResult(it));
+    
     const retailAnchor = computeRetailAnchor(classCRaw);
 
     console.log('RETAIL ANCHOR:', retailAnchor);
