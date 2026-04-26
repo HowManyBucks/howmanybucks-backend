@@ -2357,7 +2357,15 @@ const contextScore = {
     console.log('CLASS C CONTEXT DOMAINS:', uniqueDomains(classCRaw));
     console.log('LUXURY MODE:', luxuryMode);
     console.log('PRICE SOURCE DOMAINS:', uniqueDomains(priceSource));
-
+    console.log('PRICE SOURCE SAMPLE DEBUG:', priceSource.slice(0, 10).map(it => ({
+      title: it.title,
+      domain: domainOf(it.link),
+      price_str: it.price_str,
+      snippet: it.snippet,
+      parsedByGetItemPrice: getItemPrice(it),
+      parsedByParseMoney: parseMoney(`${it.price_str || ''} ${it.snippet || ''} ${it.title || ''}`)
+    })));
+    
 // 🔵 GEMINI MATCH FILTER — validazione annunci eBay/marketplace
 let geminiMatchedItems = priceSource;
 
