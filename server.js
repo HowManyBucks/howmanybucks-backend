@@ -2708,15 +2708,20 @@ let priceTypeLabel = 'used';
 let sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
 
 if (!sellableBase && luxuryMode && Number.isFinite(retailAnchor)) {
+  const retailK = 0.35;
+
+  sellableBase = retailAnchor * retailK;
   priceTypeLabel = 'retail_reference';
-  console.log('LUXURY RETAIL REFERENCE ONLY (NO AUTO PRICE):', {
-    retailAnchor
-  });
 
   luxuryFallbackNote =
-    'Nessun comparabile usato valido trovato. Prezzo retail disponibile come riferimento, non come prezzo usato diretto.';
+    'Nessun comparabile usato valido trovato. Prezzo stimato da retail luxury come riferimento secondario, non da annunci usati.';
 
-  // NON impostiamo sellableBase
+  console.log('LUXURY RETAIL FALLBACK USED:', {
+    retailAnchor,
+    k: retailK,
+    sellableBase,
+    priceTypeLabel
+  });
 }
 
 const suggested = humanRound(sellableBase);
