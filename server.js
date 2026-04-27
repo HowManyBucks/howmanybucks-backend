@@ -1846,14 +1846,27 @@ function getValidPrices(items = []) {
     .filter(p => Number.isFinite(p) && p > 0);
 }
 
-function computeRetailAnchor(retailItems = []) {
+function computeRetailAnchor(retailItems = [], isLuxury = false) {
   const prices = getValidPrices(retailItems)
-    .filter(p => p >= 80 && p <= 10000)
+    .filter(p => {
+      if (!Number.isFinite(p)) return false;
+
+      // Per luxury evitiamo retail troppo bassi/saldi non rappresentativi
+      if (isLuxury) return p >= 900 && p <= 10000;
+
+      return p >= 80 && p <= 10000;
+    })
     .sort((a, b) => a - b);
 
   if (!prices.length) return null;
 
-  // Scelta prudente: usa il prezzo retail minimo valido come anchor
+  // Per luxury non usare il prezzo minimo: troppo rischioso.
+  // Usa mediana dei retail validi.
+  if (isLuxury) {
+    return median(prices);
+  }
+
+  // Per non-luxury resta prudente: minimo valido
   return prices[0];
 }
 
@@ -2400,7 +2413,7 @@ const contextScore = {
     
     const classCRaw = topForPricing.filter(it => isClassCResult(it));
     
-    const retailAnchor = computeRetailAnchor(classCRaw);
+    const retailAnchor = computeRetailAnchor(classCRaw, luxuryMode);
 
     console.log('RETAIL ANCHOR:', retailAnchor);
     console.log('CLASS C RETAIL COUNT:', classCRaw.length);
@@ -2727,8 +2740,8 @@ if (!sellableBase && luxuryMode && Number.isFinite(retailAnchor)) {
 
 const suggested = humanRound(sellableBase);
 
-    const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
-    const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
+    const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : 1.0;
+    const suggestedPriceAdjusted = suggested ? humanRound(suggested * kVal) : suggested;
     console.log("GEO_PRICE_LOG:", JSON.stringify({
       timestamp: new Date().toISOString(),
       country: country || ENV.PRICE_COUNTRY,
