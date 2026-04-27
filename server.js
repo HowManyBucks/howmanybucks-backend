@@ -1684,6 +1684,45 @@ function isValidCategoryAdvanced(item = {}) {
   return true;
 }
 
+function matchesFinalCategoryStrict(item = {}, finalCategory = '') {
+  const text = norm(`${item.title || ''} ${item.snippet || ''} ${item.link || ''}`);
+  const c = norm(finalCategory);
+
+  if (!c) return true;
+
+  const categoryMap = {
+    jacket: ['jacket', 'giacca', 'coat', 'cappotto', 'blazer', 'piumino', 'bomber', 'windbreaker'],
+    hoodie: ['hoodie', 'felpa', 'sweatshirt', 'pull', 'pullover'],
+    't-shirt': ['t-shirt', 'tshirt', 'tee', 'maglietta', 'shirt'],
+    jeans: ['jeans', 'denim'],
+    shoe: ['shoe', 'shoes', 'scarpa', 'scarpe', 'sneaker', 'sneakers'],
+    hat: ['hat', 'cap', 'cappello', 'cappellino', 'beanie']
+  };
+
+  const positive = categoryMap[c] || [c];
+
+  const negativeForJacket = [
+    'bag', 'borsa', 'clutch', 'wallet', 'portafoglio',
+    'belt', 'cintura', 'shoe', 'shoes', 'scarpe', 'sneaker',
+    'hoodie', 'felpa', 'sweatshirt', 'pull', 'pullover',
+    'dress', 'vestito', 'skirt', 'gonna',
+    'shirt', 'camicia', 't-shirt', 'maglietta'
+  ];
+
+  if (c === 'jacket' && negativeForJacket.some(x => text.includes(norm(x)))) {
+    console.log('STRICT CATEGORY DROP:', finalCategory, '| negative match |', item.title);
+    return false;
+  }
+
+  const ok = positive.some(x => text.includes(norm(x)));
+
+  if (!ok) {
+    console.log('STRICT CATEGORY DROP:', finalCategory, '| no positive match |', item.title);
+  }
+
+  return ok;
+}
+
 // ==================================================
 // HMB PRICE UTILS
 // ==================================================
@@ -2314,6 +2353,7 @@ const contextScore = {
     const cleaned = filteredStrict
       .filter(it => isBrandAllowed(it, finalBrand))
       .filter(it => isValidCategoryAdvanced(it))
+      .filter(it => matchesFinalCategoryStrict(it, finalCategory))
       .filter(it => {
         const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
         return !isExcludedApparelResult(text);
