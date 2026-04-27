@@ -2406,6 +2406,36 @@ const contextScore = {
     console.log('CLASS C RETAIL COUNT:', classCRaw.length);
     console.log('CLASS C RETAIL DOMAINS:', uniqueDomains(classCRaw));
 
+    const retailDebugItems = classCRaw.map(it => {
+    const text = `${it.title || ''} ${it.snippet || ''}`.toLowerCase();
+
+    const soldOutHint =
+      text.includes('sold out') ||
+      text.includes('out of stock') ||
+      text.includes('non disponibile') ||
+      text.includes('esaurito');
+
+    return {
+      title: it.title,
+      domain: domainOf(it.link),
+      price: getItemPrice(it),
+      soldOutHint,
+      snippet: it.snippet
+    };
+  });
+
+  const soldOutCount = retailDebugItems.filter(x => x.soldOutHint).length;
+  const retailWithPriceCount = retailDebugItems.filter(x => Number.isFinite(x.price)).length;
+
+  console.log('LUXURY RETAIL DEBUG:', {
+    retailCount: classCRaw.length,
+    retailWithPriceCount,
+    soldOutCount,
+    soldOutRatio: classCRaw.length ? soldOutCount / classCRaw.length : 0,
+    retailAnchor,
+    sample: retailDebugItems.slice(0, 8)
+  });
+    
     let classAForPricing = classARaw;
     let classBForPricing = classBRaw;
 
