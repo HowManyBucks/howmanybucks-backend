@@ -799,8 +799,36 @@ async function serpSearch({ query, site, num, hl='it', gl='it' }) {
   const url = `https://serpapi.com/search.json?${params.toString()}`;
   const { data } = await axios.get(url, { timeout: 15000 });
 
-  const organic = (data.organic_results || []).map(r => ({
-    title: r.title, link: r.link, snippet: r.snippet, price_str: r.price || r.snippet
+  // ==================================================
+  // STEP 14 — DEBUG SERP RAW
+  // ==================================================
+  console.log('STEP 14 FINAL QUERY:', query);
+  console.log('STEP 14 SITE:', site);
+  console.log('STEP 14 URL:', url);
+
+  console.log(
+    'STEP 14 SERP RAW RESULTS:',
+    (data.organic_results || []).slice(0, 5).map(r => ({
+      title: r.title,
+      link: r.link,
+      snippet: r.snippet,
+      price: r.price
+    }))
+  );
+
+  console.log(
+    'STEP 14 ALL DOMAINS FOUND:',
+    (data.organic_results || []).map(r => {
+      try {
+        return new URL(r.link).hostname.replace(/^www\./, '');
+      } catch {
+        return r.link;
+      }
+    })
+  );
+
+const organic = (data.organic_results || []).map(r => ({
+  title: r.title, link: r.link, snippet: r.snippet, price_str: r.price || r.snippet
   }));
   const shopping = (data.shopping_results || []).map(s => ({
     title: s.title, link: s.link,
