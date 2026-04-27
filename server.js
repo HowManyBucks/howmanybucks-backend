@@ -1693,59 +1693,71 @@ function extractPriceNumber(input) {
 
   const text = String(input);
 
-  const explicitPriceMatches = text.match(/(?:€|eur|euro)\s?[\d.,]+|[\d.,]+\s?(?:€|eur|euro)/gi);
-
-  if (explicitPriceMatches && explicitPriceMatches.length) {
-    const nums = explicitPriceMatches
-      .map(x => {
-        const cleaned = x
-          .toLowerCase()
-          .replace(/eur|euro|€/g, '')
-          .replace(/\s/g, '')
-          .replace(/\./g, '')
-          .replace(',', '.');
-
-        const n = parseEuropeanNumber(cleaned);
-        return Number.isFinite(n) ? n : null;
-      })
-      .filter(Number.isFinite);
-
-    if (nums.length) return Math.min(...nums);
+  // Blocca valute NON euro per MVP
+  if (/\$|usd|dollar|gbp|£|pound|chf|cad|aud/i.test(text)) {
+    return null;
   }
 
-  return null;
+  // Accetta SOLO prezzi con €, EUR, euro
+  const explicitPriceMatches = text.match(
+    /(?:€|eur|euro)\s?[\d.,]+|[\d.,]+\s?(?:€|eur|euro)/gi
+  );
+
+  if (!explicitPriceMatches || !explicitPriceMatches.length) {
+    return null;
+  }
+
+  const nums = explicitPriceMatches
+    .map(x => {
+      const cleaned = x
+        .toLowerCase()
+        .replace(/eur|euro|€/g, '')
+        .replace(/\s/g, '');
+
+      const n = parseEuropeanNumber(cleaned);
+      return Number.isFinite(n) ? n : null;
+    })
+    .filter(Number.isFinite);
+
+  if (!nums.length) return null;
+
+  return Math.min(...nums);
 }
 
-function parseEuropeanNumber(value) {
+function parsePriceByCurrency(value, currency = 'EUR') {
   if (value === null || value === undefined) return null;
 
   let s = String(value).trim();
-
-  // tiene solo numeri, punto e virgola
   s = s.replace(/[^\d.,]/g, '');
 
   if (!s) return null;
 
+  const cur = String(currency || 'EUR').toUpperCase();
   const hasDot = s.includes('.');
   const hasComma = s.includes(',');
 
-  // Caso europeo: 2.500,50
-  if (hasDot && hasComma) {
-    s = s.replace(/\./g, '').replace(',', '.');
-  }
-
-  // Caso europeo: 2.500
-  else if (hasDot && !hasComma) {
-    const parts = s.split('.');
-
-    if (parts.length > 1 && parts[parts.length - 1].length === 3) {
-      s = s.replace(/\./g, '');
+  if (cur === 'USD' || cur === 'GBP') {
+    if (hasDot && hasComma) {
+      s = s.replace(/,/g, '');
+    } else if (hasComma && !hasDot) {
+      const parts = s.split(',');
+      if (parts[parts.length - 1].length === 3) {
+        s = s.replace(/,/g, '');
+      } else {
+        s = s.replace(',', '.');
+      }
     }
-  }
-
-  // Caso europeo: 700,00
-  else if (!hasDot && hasComma) {
-    s = s.replace(',', '.');
+  } else {
+    if (hasDot && hasComma) {
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else if (hasDot && !hasComma) {
+      const parts = s.split('.');
+      if (parts[parts.length - 1].length === 3) {
+        s = s.replace(/\./g, '');
+      }
+    } else if (!hasDot && hasComma) {
+      s = s.replace(',', '.');
+    }
   }
 
   const n = Number(s);
