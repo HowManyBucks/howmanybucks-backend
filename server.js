@@ -2474,31 +2474,30 @@ if (checkedWithPrice.length >= 1) {
 }
 }
     
-const priceFilteredSource = filterPrices(priceSource, retailAnchor, luxuryMode);
+const priceFilteredSource = filterPrices(
+  priceSource,
+  null, // non usare retailAnchor per filtrare i prezzi usati
+  luxuryMode
+);
 
 console.log('PRICE FILTERED SOURCE COUNT:', priceFilteredSource.length);
 
     const rawPrices = priceFilteredSource
-      .map(it => {
-        const priceText = String(it.price_str || '').trim();
-        const snippetText = String(it.snippet || '').trim();
-        const titleText = String(it.title || '').trim();
+  .map(it => {
+    const price = getItemPrice(it);
 
-    // 1️⃣ priorità: prezzo diretto
-    if (priceText) {
-      const direct = parseMoney(priceText);
-      if (Number.isFinite(direct)) return direct;
-    }
+    console.log('RAW PRICE READ:', {
+      title: it.title,
+      domain: domainOf(it.link),
+      price_str: it.price_str,
+      snippet: it.snippet,
+      parsedPrice: price
+    });
 
-    // 2️⃣ fallback: cerca OVUNQUE (snippet + titolo)
-    const combined = `${snippetText} ${titleText}`;
-
-    const matches = combined.match(/[$€£]\s?[\d,.]+|[\d,.]+\s?[$€£]/g) || [];
-
-    const nums = matches
-      .map(x => parseMoney(x))
-      .filter(Number.isFinite)
-      .filter(p => p >= 80 && p <= 5000);
+    return price;
+  })
+  .filter(Number.isFinite)
+  .filter(p => p >= 80 && p <= 5000);
 
     if (!nums.length) return NaN;
 
