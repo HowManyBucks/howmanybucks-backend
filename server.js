@@ -2581,14 +2581,16 @@ const checkedWithPrice = checked.filter(it => {
 console.log('GEMINI MATCHED COUNT:', checked.length);
 console.log('GEMINI MATCHED WITH PRICE COUNT:', checkedWithPrice.length);
 
-if (checkedWithPrice.length >= 3) {
+if (checkedWithPrice.length >= 1) {
   priceSource = checkedWithPrice;
   console.log('PRICE SOURCE OVERRIDE - GEMINI MATCHED WITH PRICE:', priceSource.length);
 } else {
-  console.log('GEMINI TOO FEW VALID MATCHED PRICES - KEEPING ORIGINAL PRICE SOURCE:', {
-    checkedWithPrice: checkedWithPrice.length,
-    originalPriceSource: priceSource.length
-  });
+  if (luxuryMode) {
+    priceSource = [];
+    console.log('LUXURY GEMINI BLOCK - NO VALID MATCHED PRICE, PRICE SOURCE CLEARED');
+  } else {
+    console.log('GEMINI MATCHED BUT NO PRICE - KEEPING ORIGINAL PRICE SOURCE:', priceSource.length);
+  }
 }
 }
     
