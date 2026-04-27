@@ -2105,7 +2105,7 @@ if (merged.length < 5) {
       } catch (e) {}
     }
     
-    if (includeShopping) {
+    if (includeShopping || fallbackLuxuryMode) {
       try {
         const shop = await serpShoppingGlobal({
           query: q,
