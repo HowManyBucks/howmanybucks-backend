@@ -2599,7 +2599,10 @@ const suggested = humanRound(sellableBase);
       },
       suggestedPrice: suggested,
       suggestedPriceAdjusted,
-      currency: ENV.PRICE_CURRENCY,
+      ccurrency: ENV.PRICE_CURRENCY,
+      marketLabel: isItalianMarket
+        ? 'Prezzo consigliato con priorità mercato italiano'
+        : 'Prezzo consigliato con ricerca mercato globale',
       examples: ranked.slice(0, 18)
     });
   } catch (err) {
