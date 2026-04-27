@@ -317,6 +317,11 @@ function isItalianPricingResult(item = {}, siteList = []) {
     return true;
   }
 
+  if (RETAIL_CONTEXT_DOMAINS.has(d)) {
+    console.log('ITALIAN FILTER PASS - RETAIL CONTEXT CLASS C:', d, '|', item.title);
+    return true;
+  }
+
   console.log('ITALIAN FILTER DROP - GLOBAL DOMAIN NOT ALLOWED:', d, '|', item.title);
   return false;
 }  
