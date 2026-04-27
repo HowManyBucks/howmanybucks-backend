@@ -2439,6 +2439,7 @@ const contextScore = {
 
   const soldOutCount = retailDebugItems.filter(x => x.soldOutHint).length;
   const retailWithPriceCount = retailDebugItems.filter(x => Number.isFinite(x.price)).length;
+  const soldOutRatio = classCRaw.length ? soldOutCount / classCRaw.length : 0;
 
   console.log('LUXURY RETAIL DEBUG:', {
     retailCount: classCRaw.length,
@@ -2722,7 +2723,7 @@ let luxuryFallbackNote = null;
 let sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
 
 if (!sellableBase && luxuryMode && Number.isFinite(retailAnchor)) {
-  const retailK = 0.45;
+  const retailK = soldOutRatio > 0.3 ? 0.5 : 0.35;
 
   sellableBase = retailAnchor * retailK;
   priceTypeLabel = 'retail_reference';
