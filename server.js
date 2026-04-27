@@ -2722,7 +2722,7 @@ let luxuryFallbackNote = null;
 let sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
 
 if (!sellableBase && luxuryMode && Number.isFinite(retailAnchor)) {
-  const retailK = 0.35;
+  const retailK = 0.45;
 
   sellableBase = retailAnchor * retailK;
   priceTypeLabel = 'retail_reference';
