@@ -2558,9 +2558,24 @@ const { baseMedian, mode, newRatio } = applyConditionHeuristic(
   condition
 );
     
-const sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
+let luxuryFallbackNote = null;
 
-const suggested = humanRound(sellableBase);  
+let sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
+
+if (!sellableBase && luxuryMode && Number.isFinite(retailAnchor)) {
+  sellableBase = retailAnchor * 0.35;
+
+  luxuryFallbackNote =
+    'Pochi capi usati analoghi trovati: prezzo stimato usando retail luxury come riferimento secondario con sconto.';
+  
+  console.log('LUXURY RETAIL FALLBACK USED:', {
+    retailAnchor,
+    k: 0.35,
+    sellableBase
+  });
+}
+
+const suggested = humanRound(sellableBase);
 
     const kVal = (kFactor !== null && !isNaN(Number(kFactor))) ? Number(kFactor) : null;
     const suggestedPriceAdjusted = (kVal && suggested) ? humanRound(suggested * kVal) : suggested;
