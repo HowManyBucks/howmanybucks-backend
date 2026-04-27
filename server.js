@@ -2237,9 +2237,9 @@ if (merged.length < 5) {
     console.log('FALLBACK SAMPLE TITLES:', deduped.slice(0, 10).map(x => x.title));
     console.log('FALLBACK SAMPLE DOMAINS:', deduped.slice(0, 10).map(x => domainOf(x.link)));
     
-    const priced = deduped.filter(
-      it => parseMoney(it.price_str || it.title || it.snippet) != null
-    );
+   const priced = deduped.filter(
+    it => Number.isFinite(getItemPrice(it))
+  );
 
     if (priced.length >= 6) {
       merged = deduped;
@@ -2438,9 +2438,9 @@ const contextScore = {
         console.log('ITALIAN FALLBACK SAMPLE TITLES:', dedupedRaw.slice(0, 10).map(x => x.title));
         console.log('ITALIAN FALLBACK SAMPLE DOMAINS:', dedupedRaw.slice(0, 10).map(x => domainOf(x.link)));
 
-        const deduped = dedupedRaw
-          .filter(it => isItalianPricingResult(it, siteList))
-          .filter(it => parseMoney(it.price_str || it.title || it.snippet) != null);
+       const deduped = dedupedRaw
+        .filter(it => isItalianPricingResult(it, siteList))
+        .filter(it => Number.isFinite(getItemPrice(it)));
 
         if (deduped.length) {
           italianFallback = deduped;
@@ -2528,7 +2528,7 @@ const contextScore = {
       price_str: it.price_str,
       snippet: it.snippet,
       parsedByGetItemPrice: getItemPrice(it),
-      parsedByParseMoney: parseMoney(`${it.price_str || ''} ${it.snippet || ''} ${it.title || ''}`)
+      parsedByLegacyParseMoney: parseMoney(`${it.price_str || ''} ${it.snippet || ''} ${it.title || ''}`)
     })));
     
 // 🔵 GEMINI MATCH FILTER — validazione annunci eBay/marketplace
