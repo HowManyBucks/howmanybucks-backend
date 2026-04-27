@@ -1705,7 +1705,7 @@ function extractPriceNumber(input) {
           .replace(/\./g, '')
           .replace(',', '.');
 
-        const n = Number(cleaned);
+        const n = parseEuropeanNumber(cleaned);
         return Number.isFinite(n) ? n : null;
       })
       .filter(Number.isFinite);
@@ -1714,6 +1714,42 @@ function extractPriceNumber(input) {
   }
 
   return null;
+}
+
+function parseEuropeanNumber(value) {
+  if (value === null || value === undefined) return null;
+
+  let s = String(value).trim();
+
+  // tiene solo numeri, punto e virgola
+  s = s.replace(/[^\d.,]/g, '');
+
+  if (!s) return null;
+
+  const hasDot = s.includes('.');
+  const hasComma = s.includes(',');
+
+  // Caso europeo: 2.500,50
+  if (hasDot && hasComma) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  }
+
+  // Caso europeo: 2.500
+  else if (hasDot && !hasComma) {
+    const parts = s.split('.');
+
+    if (parts.length > 1 && parts[parts.length - 1].length === 3) {
+      s = s.replace(/\./g, '');
+    }
+  }
+
+  // Caso europeo: 700,00
+  else if (!hasDot && hasComma) {
+    s = s.replace(',', '.');
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 function getItemPrice(item) {
@@ -2627,7 +2663,7 @@ const suggested = humanRound(sellableBase);
       },
       suggestedPrice: suggested,
       suggestedPriceAdjusted,
-      ccurrency: ENV.PRICE_CURRENCY,
+      currency: ENV.PRICE_CURRENCY,
       marketLabel: isItalianMarket
         ? 'Prezzo consigliato con priorità mercato italiano'
         : 'Prezzo consigliato con ricerca mercato globale',
