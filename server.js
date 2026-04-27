@@ -1724,6 +1724,33 @@ function extractPriceNumber(input) {
   return Math.min(...nums);
 }
 
+// INSERISCI QUI
+function parseEuropeanNumber(value) {
+  if (value === null || value === undefined) return null;
+
+  let s = String(value).trim();
+  s = s.replace(/[^\d.,]/g, '');
+
+  if (!s) return null;
+
+  const hasDot = s.includes('.');
+  const hasComma = s.includes(',');
+
+  if (hasDot && hasComma) {
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (hasDot && !hasComma) {
+    const parts = s.split('.');
+    if (parts.length > 1 && parts[parts.length - 1].length === 3) {
+      s = s.replace(/\./g, '');
+    }
+  } else if (!hasDot && hasComma) {
+    s = s.replace(',', '.');
+  }
+
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
 function parsePriceByCurrency(value, currency = 'EUR') {
   if (value === null || value === undefined) return null;
 
