@@ -2704,7 +2704,8 @@ const { baseMedian, mode, newRatio } = applyConditionHeuristic(
 );
     
 let priceTypeLabel = 'used';
-
+let luxuryFallbackNote = null;
+    
 let sellableBase = computeFinalPrice(prices, luxuryMode) ?? baseMedian;
 
 if (!sellableBase && luxuryMode && Number.isFinite(retailAnchor)) {
