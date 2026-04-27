@@ -2499,23 +2499,6 @@ console.log('PRICE FILTERED SOURCE COUNT:', priceFilteredSource.length);
   .filter(Number.isFinite)
   .filter(p => p >= 80 && p <= 5000);
 
-const rawPrices = priceFilteredSource
-  .map(it => {
-    const price = getItemPrice(it);
-
-    console.log('RAW PRICE READ:', {
-      title: it.title,
-      domain: domainOf(it.link),
-      price_str: it.price_str,
-      snippet: it.snippet,
-      parsedPrice: price
-    });
-
-    return price;
-  })
-  .filter(Number.isFinite)
-  .filter(p => p >= 80 && p <= 5000);
-
 console.log('RAW PRICES SAMPLE:', rawPrices.slice(0, 10));
     
 // 🔴 LUXURY PRICE FLOOR
