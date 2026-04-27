@@ -2364,12 +2364,29 @@ const contextScore = {
     let priceSource = luxuryMode
       ? classBForPricing
       : classAForPricing;
-    
+
     if (priceSource.length < 3) {
       priceSource = luxuryMode
         ? dedupeByLink([...classBForPricing, ...classAForPricing])
         : dedupeByLink([...classAForPricing, ...classBForPricing]);
     }
+
+    // STEP 18 — se luxury usa Classe B ma non ci sono prezzi leggibili,
+    // includi anche Classe A perché Vinted/Subito/eBay possono avere prezzi nello snippet.
+    if (luxuryMode) {
+      const readablePricesInCurrentSource = getValidPrices(priceSource);
+
+      if (!readablePricesInCurrentSource.length) {
+        const classAWithPrices = classAForPricing.filter(it =>
+        Number.isFinite(getItemPrice(it))
+      );
+
+      if (classAWithPrices.length) {
+        console.log('LUXURY PRICE SOURCE FALLBACK TO CLASS A WITH PRICES:', classAWithPrices.length);
+        priceSource = dedupeByLink([...classBForPricing, ...classAWithPrices]);
+      }
+    }  
+  }
 
     const ebayOnly = priceSource.filter(it =>
       String(it.source || '').includes('ebay')
