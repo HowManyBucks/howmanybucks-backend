@@ -2499,10 +2499,19 @@ console.log('PRICE FILTERED SOURCE COUNT:', priceFilteredSource.length);
   .filter(Number.isFinite)
   .filter(p => p >= 80 && p <= 5000);
 
-    if (!nums.length) return NaN;
+const rawPrices = priceFilteredSource
+  .map(it => {
+    const price = getItemPrice(it);
 
-    // 🔑 PRENDI IL PIÙ BASSO (logica second-hand)
-    return Math.min(...nums);
+    console.log('RAW PRICE READ:', {
+      title: it.title,
+      domain: domainOf(it.link),
+      price_str: it.price_str,
+      snippet: it.snippet,
+      parsedPrice: price
+    });
+
+    return price;
   })
   .filter(Number.isFinite)
   .filter(p => p >= 80 && p <= 5000);
