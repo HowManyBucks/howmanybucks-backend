@@ -2470,7 +2470,12 @@ if (checkedWithPrice.length >= 1) {
   priceSource = checkedWithPrice;
   console.log('PRICE SOURCE OVERRIDE - GEMINI MATCHED WITH PRICE:', priceSource.length);
 } else {
-  console.log('GEMINI MATCHED BUT NO PRICE - KEEPING ORIGINAL PRICE SOURCE:', priceSource.length);
+  if (luxuryMode && checked.length === 0) {
+    priceSource = [];
+    console.log('LUXURY GEMINI BLOCK - ALL ITEMS REJECTED, PRICE SOURCE CLEARED');
+  } else {
+    console.log('GEMINI MATCHED BUT NO PRICE - KEEPING ORIGINAL PRICE SOURCE:', priceSource.length);
+  }
 }
 }
     
